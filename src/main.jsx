@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import ProvedorEstado from "./estado/ProvedorEstado.jsx";
+import ProvedorPlayer from "./audio/ProvedorPlayer.jsx";
 import App from "./App.jsx";
 import "./estilos.css";
 
@@ -14,7 +15,10 @@ import "./estilos.css";
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ProvedorEstado>
-      <App />
+      {/* O player fica DENTRO do estado: ele precisa saber qual conversa está aberta */}
+      <ProvedorPlayer>
+        <App />
+      </ProvedorPlayer>
     </ProvedorEstado>
   </StrictMode>
 );

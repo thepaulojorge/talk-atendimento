@@ -67,7 +67,7 @@ export function reducer(estado, acao) {
     case "definirRascunho":
       return { ...estado, rascunhos: { ...estado.rascunhos, [acao.conversaId]: acao.texto } };
 
-    /* Enviar mensagem, com as mesmas regras da versão antiga:
+    /* Enviar mensagem (texto ou áudio), com as mesmas regras da versão antiga:
        - conversa da fila: quem respondeu assume
        - conversa resolvida: reabre
        Cada regra deixa um evento no histórico ("Paulo assumiu a conversa") */
@@ -97,10 +97,12 @@ export function reducer(estado, acao) {
           autor: null,
         }));
 
+        /* acao.conteudo traz o que muda entre texto e áudio:
+           { tipo: "texto", texto } ou { tipo: "audio", audioUrl, duracao }.
+           As regras acima (assumir, reabrir) valem igual para os dois */
         const novaMensagem = {
           id: acao.id,
-          tipo: "texto",
-          texto: acao.texto,
+          ...acao.conteudo,
           horario: acao.agora,
           direcao: "enviada",
           lida: false, // ✓✓ cinza: o cliente ainda não leu

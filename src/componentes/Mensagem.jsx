@@ -1,10 +1,10 @@
 import { useEstado } from "../estado/useEstado.js";
-import { avisar } from "../estado/avisos.js";
 import { buscarPorId, nomeDoAutor, resumoDaMensagem } from "../utilidades/conversas.js";
 import { formatarHoraMensagem } from "../utilidades/datas.js";
 import { podeVerAuditoria } from "../utilidades/permissoes.js";
 import { formatarDuracao } from "../utilidades/texto.js";
 import Icone from "./Icone.jsx";
+import BalaoAudio from "./BalaoAudio.jsx";
 
 /* Um balão de mensagem: texto, áudio, nota interna ou apagada.
    Props:
@@ -12,7 +12,7 @@ import Icone from "./Icone.jsx";
    - destacada: true quando alguém clicou numa citação desta mensagem
    - aoResponder(id), aoIrPara(id): o que fazer nos cliques (quem decide é o pai) */
 export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPara }) {
-  const { estado, despachar } = useEstado();
+  const { estado } = useEstado();
   const supervisao = podeVerAuditoria(estado);
   const classeBase = `mensagem mensagem--${msg.direcao}${destacada ? " mensagem--destaque" : ""}`;
 
@@ -71,20 +71,7 @@ export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPa
       )}
 
       {msg.tipo === "audio" ? (
-        <div className="audio">
-          <button
-            type="button"
-            className="audio__play"
-            aria-label="Reproduzir áudio"
-            onClick={() => avisar(despachar, "A reprodução de áudio chega na etapa 2b 🎧")}
-          >
-            <Icone nome="tocar" />
-          </button>
-          <div className="audio__barra">
-            <div className="audio__progresso" />
-          </div>
-          <span className="audio__duracao">{formatarDuracao(msg.duracao)}</span>
-        </div>
+        <BalaoAudio msg={msg} />
       ) : (
         <div className="mensagem__texto">{msg.texto}</div>
       )}

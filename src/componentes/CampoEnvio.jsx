@@ -4,17 +4,23 @@ import { avisar } from "../estado/avisos.js";
 import { nomeDoAutor, preencherModelo, resumoDaMensagem } from "../utilidades/conversas.js";
 import { normalizar } from "../utilidades/texto.js";
 import { useTelaEstreita } from "../hooks/useTelaEstreita.js";
+import { useGravador } from "../hooks/useGravador.js";
+import { formatarDuracao } from "../utilidades/texto.js";
 import { Citacao } from "./Mensagem.jsx";
 import Icone from "./Icone.jsx";
+
+const LIMITE_AUDIO_SEGUNDOS = 5 * 60; // 5 minutos: depois disso, envia sozinho
 
 /* O campo de mensagem, com:
    - rascunho por conversa (o texto fica no estado global, em "rascunhos")
    - respostas rápidas com "/"
-   - barra "Respondendo a..." quando há citação */
+   - barra "Respondendo a..." quando há citação
+   - gravação de áudio */
 export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }) {
   const { estado, despachar } = useEstado();
   const estreita = useTelaEstreita();
   const campo = useRef(null);
+  const gravador = useGravador();
 
   /* "Componente controlado": o valor do <input> vem do ESTADO, e cada letra
      digitada atualiza o estado. O React é a única "fonte da verdade" */
@@ -53,11 +59,9 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
     campo.current?.focus();
   }
 
-  function enviar(evento) {
-    evento.preventDefault(); // sem isso o form recarregaria a página
-    const conteudo = texto.trim();
-    if (!conteudo) return;
-
+  /* Envio comum para texto e áudio.
+     conteudo = { tipo: "texto", texto } ou { tipo: "audio", audioUrl, duracao } */
+  function despacharEnvio(conteudo) {
     // Id e horário nascem AQUI (o reducer precisa ser puro)
     const id = `m${Date.now()}`;
     despachar({
@@ -65,7 +69,7 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
       conversaId: conversa.id,
       id,
       agora: new Date().toISOString(),
-      texto: conteudo,
+      conteudo,
       respostaA: respondendoA?.id,
     });
     aoCancelarCitacao();
@@ -75,6 +79,44 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
     const conversaId = conversa.id;
     setTimeout(() => despachar({ tipo: "mensagemLida", conversaId, mensagemId: id }), 3000);
   }
+
+  function enviar(evento) {
+    evento.preventDefault(); // sem isso o form recarregaria a página
+    const conteudo = texto.trim();
+    if (conteudo) despacharEnvio({ tipo: "texto", texto: conteudo });
+  }
+
+  /* ---------- Áudio ---------- */
+  async function comecarGravacao() {
+    try {
+      await gravador.iniciar();
+    } catch (erro) {
+      // Cada tipo de erro vira uma explicação que a pessoa entende
+      if (erro.name === "NotAllowedError") {
+        avisar(despachar, "Permissão do microfone negada. Libere no cadeado ao lado do endereço do site.");
+      } else if (erro.message === "sem-suporte") {
+        avisar(despachar, "Este navegador não permite gravar áudio aqui (precisa de localhost ou HTTPS)");
+      } else {
+        avisar(despachar, "Não foi possível acessar o microfone");
+      }
+    }
+  }
+
+  async function enviarGravacao() {
+    const audio = await gravador.parar(true);
+    if (!audio) return;
+    if (audio.curto) return avisar(despachar, "Áudio muito curto");
+    if (audio.erro) return avisar(despachar, "Não foi possível processar o áudio");
+    despacharEnvio({ tipo: "audio", audioUrl: audio.audioUrl, duracao: audio.duracao });
+  }
+
+  // Chegou ao limite de 5 minutos? Envia sozinho
+  useEffect(() => {
+    if (gravador.gravando && gravador.segundos >= LIMITE_AUDIO_SEGUNDOS) {
+      avisar(despachar, "Limite de 5 minutos: o áudio foi enviado");
+      enviarGravacao();
+    }
+  });
 
   function aoApertarTecla(evento) {
     if (sugestoes.length > 0) {
@@ -147,37 +189,49 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
         </ul>
       )}
 
-      <form className="chat__envio" onSubmit={enviar}>
-        <label htmlFor="campo-mensagem" className="visualmente-oculto">
-          Digite uma mensagem
-        </label>
-        <input
-          ref={campo}
-          id="campo-mensagem"
-          type="text"
-          autoComplete="off"
-          placeholder={estreita ? "Mensagem ou / atalho" : "Digite uma mensagem ou / para respostas rápidas"}
-          value={texto}
-          onChange={(evento) => mudarTexto(evento.target.value)}
-          onKeyDown={aoApertarTecla}
-        />
+      {/* Gravando? A barra de gravação aparece NO LUGAR do campo */}
+      {gravador.gravando ? (
+        <div className="gravacao">
+          <span className="gravacao__ponto" aria-hidden="true" />
+          <span className="gravacao__tempo" aria-live="off">
+            {formatarDuracao(gravador.segundos)}
+          </span>
+          <button type="button" id="botao-cancelar-audio" onClick={() => gravador.parar(false)}>
+            Cancelar
+          </button>
+          {/* autoFocus: o foco vai para cá ao começar (Enter já envia) */}
+          <button type="button" id="botao-enviar-audio" autoFocus onClick={enviarGravacao}>
+            Enviar áudio
+          </button>
+        </div>
+      ) : (
+        <form className="chat__envio" onSubmit={enviar}>
+          <label htmlFor="campo-mensagem" className="visualmente-oculto">
+            Digite uma mensagem
+          </label>
+          <input
+            ref={campo}
+            id="campo-mensagem"
+            type="text"
+            autoComplete="off"
+            placeholder={estreita ? "Mensagem ou / atalho" : "Digite uma mensagem ou / para respostas rápidas"}
+            value={texto}
+            onChange={(evento) => mudarTexto(evento.target.value)}
+            onKeyDown={aoApertarTecla}
+          />
 
-        {/* Campo vazio: microfone. Com texto: enviar */}
-        {temTexto ? (
-          <button type="submit" id="botao-enviar" aria-label="Enviar mensagem">
-            <Icone nome="enviar" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            id="botao-audio"
-            aria-label="Gravar áudio"
-            onClick={() => avisar(despachar, "A gravação de áudio chega na etapa 2b 🎤")}
-          >
-            <Icone nome="mic" />
-          </button>
-        )}
-      </form>
+          {/* Campo vazio: microfone. Com texto: enviar */}
+          {temTexto ? (
+            <button type="submit" id="botao-enviar" aria-label="Enviar mensagem">
+              <Icone nome="enviar" />
+            </button>
+          ) : (
+            <button type="button" id="botao-audio" aria-label="Gravar áudio" onClick={comecarGravacao}>
+              <Icone nome="mic" />
+            </button>
+          )}
+        </form>
+      )}
     </>
   );
 }
