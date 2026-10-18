@@ -4,6 +4,7 @@ import { contarTotalNaoLidas } from "./utilidades/conversas.js";
 import TopoApp from "./componentes/TopoApp.jsx";
 import BarraLateral from "./componentes/BarraLateral.jsx";
 import Chat from "./componentes/Chat.jsx";
+import Aviso from "./componentes/Aviso.jsx";
 
 /* O componente principal: monta a tela com os pedaços */
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
         <BarraLateral />
         <Chat />
       </div>
+      <Aviso />
     </>
   );
 }

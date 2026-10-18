@@ -1029,13 +1029,15 @@ kbd {
   flex: 1;
 }
 
-#botao-cancelar-citacao {
+#botao-cancelar-citacao,
+.botao-cancelar-citacao {
   width: 32px;
   height: 32px;
   border-radius: 50%;
 }
 
-#botao-cancelar-citacao:hover {
+#botao-cancelar-citacao:hover,
+.botao-cancelar-citacao:hover {
   background: var(--fundo-hover);
 }
 

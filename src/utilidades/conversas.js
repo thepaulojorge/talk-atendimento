@@ -63,6 +63,26 @@ export function textoPrevia(conversa, estado) {
   return conteudo;
 }
 
+/* Quem escreveu, do ponto de vista de quem está logado:
+   "Você", "Carla", o participante do grupo ou o nome do contato */
+export function nomeDoAutor(msg, conversa, estado) {
+  if (msg.direcao === "enviada" || msg.tipo === "nota") {
+    if (msg.autor === estado.atendenteLogadoId) return "Você";
+    return buscarPorId(estado.atendentes, msg.autor)?.nome || "Equipe";
+  }
+  if (conversa.tipo === "grupo" && msg.autor) return msg.autor;
+  return nomeDaConversa(conversa, estado.contatos);
+}
+
+/* Respostas rápidas: troca as "lacunas" pelos dados reais
+   {nome} -> primeiro nome do cliente | {atendente} -> quem está logado */
+export function preencherModelo(texto, conversa, estado) {
+  const primeiroNome =
+    conversa.tipo === "grupo" ? "pessoal" : nomeDaConversa(conversa, estado.contatos).split(" ")[0];
+  const atendente = buscarPorId(estado.atendentes, estado.atendenteLogadoId)?.nome || "";
+  return texto.replaceAll("{nome}", primeiroNome).replaceAll("{atendente}", atendente);
+}
+
 /* Ordem da lista:
    1º as fixadas (a fixada mais recentemente primeiro)
    2º as demais (a última mensagem mais recente primeiro) */
