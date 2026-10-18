@@ -1,0 +1,2267 @@
+/* Estilos globais do Talk Atendimento (vindos da versão em JavaScript puro).
+   Os nomes das classes são os mesmos: os componentes reaproveitam tudo. */
+
+/* =========================================================
+   1. VARIÁVEIS (cores e medidas reutilizadas no arquivo todo)
+   Os nomes dizem PARA QUE a cor serve, não QUAL cor ela é.
+   Assim cada tema só troca os valores, sem mexer no resto do CSS.
+   ========================================================= */
+
+/* ---------- Tema principal: PRETO ---------- */
+:root {
+  color-scheme: dark; /* barras de rolagem e campos nativos também ficam escuros */
+
+  /* Destaque: botões, badges, filtro ativo. No tema preto, o destaque é o branco */
+  --destaque: #f5f5f5;
+  --destaque-forte: #ffffff;
+  --destaque-suave: #262626;
+  --sobre-destaque: #0a0a0a; /* texto escrito em cima do destaque */
+
+  --fundo-topo: #000000;
+  --texto-topo: #f5f5f5;
+  --fundo-app: #000000;
+  --fundo-painel: #0e0e0e;
+  --fundo-chat: #070707;
+  --fundo-hover: #1a1a1a;
+  --fundo-ativo: #232323;
+
+  --balao-recebido: #171717;
+  --balao-enviado: #2a2a2a;
+
+  --avatar-fundo: #2e2e2e;
+  --avatar-grupo: #3d3d3d;
+  --avatar-texto: #f5f5f5;
+  /* Avatares coloridos: o JS escolhe só o TOM (matiz, de 0 a 360°).
+     Saturação e luminosidade ficam aqui, por tema, para o contraste
+     da letra ser bom em qualquer tom (conferido: no mínimo 4,8:1;
+     o recomendado para texto é 4,5:1) */
+  --avatar-fundo-sat: 45%;
+  --avatar-fundo-luz: 30%;
+  --avatar-letra-sat: 75%;
+  --avatar-letra-luz: 88%;
+
+  --texto: #f2f2f2;
+  --texto-suave: #8f8f8f;
+  --borda: #242424;
+
+  /* Cores que têm SIGNIFICADO continuam coloridas em qualquer tema */
+  --alerta: #ef5350;
+  --sucesso: #5cc98f; /* resolvido */
+  --azul-lido: #53bdeb; /* azul dos tracinhos ✓✓ de "lida" */
+  --fundo-citacao: rgba(255, 255, 255, 0.06); /* fundo do trecho citado */
+  --nota-fundo: #2e2812; /* amarelo de "post-it" das notas internas */
+  --nota-borda: #8a7022;
+  --nota-texto: #f0d77a;
+  --sombra: 0 8px 28px rgba(0, 0, 0, 0.7);
+
+  --raio: 10px;
+  --largura-lateral: 360px;
+  --largura-dados: 340px;
+  --altura-topo: 56px;
+}
+
+/* ---------- Tema claro (VERDE) — guardado para depois ----------
+   Ainda não há botão para ativar. Quando fizermos o tema claro,
+   basta o JS colocar data-tema="claro" no <html> */
+:root[data-tema="claro"] {
+  color-scheme: light;
+
+  --destaque: #1f8f6a;
+  --destaque-forte: #16694e;
+  --destaque-suave: #d9f5e8;
+  --sobre-destaque: #ffffff;
+
+  --fundo-topo: #1f8f6a;
+  --texto-topo: #ffffff;
+  --fundo-app: #eef1f3;
+  --fundo-painel: #ffffff;
+  --fundo-chat: #f4efe8;
+  --fundo-hover: #f2f4f5;
+  --fundo-ativo: #e6ebee;
+
+  --balao-recebido: #ffffff;
+  --balao-enviado: #d9f5e8;
+
+  --avatar-fundo: #1f8f6a;
+  --avatar-grupo: #5a6bd6;
+  --avatar-texto: #ffffff;
+  --avatar-fundo-sat: 65%;
+  --avatar-fundo-luz: 88%;
+  --avatar-letra-sat: 55%;
+  --avatar-letra-luz: 26%;
+
+  --texto: #1d2329;
+  --texto-suave: #66737f;
+  --borda: #dde3e7;
+
+  --alerta: #d64545;
+  --sucesso: #1f8f6a;
+  --azul-lido: #34b7f1;
+  --fundo-citacao: rgba(0, 0, 0, 0.06);
+  --nota-fundo: #fff3c4;
+  --nota-borda: #e2b93b;
+  --nota-texto: #6b5200;
+  --sombra: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* =========================================================
+   2. BASE
+   ========================================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Garante que "hidden" sempre esconda, mesmo com display: flex */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  color: var(--texto);
+  background: var(--fundo-app);
+  /* 100vh no celular = altura MÁXIMA da tela, sem descontar as barras do
+     navegador: o rodapé da página ficava escondido atrás da barra da URL.
+     100dvh ("dynamic") = a área realmente visível, e acompanha a barra.
+     O 100vh fica como reserva: navegador antigo que não entende dvh usa ele */
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* O React desenha tudo dentro de <div id="root">. Antes, o body organizava
+   o topo e as colunas direto; agora o #root fica no meio e repassa o layout */
+#root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mensagem de erro se o dados.json não carregar */
+.aviso-carregamento {
+  margin: auto;
+  padding: 24px;
+  color: var(--texto-suave);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  list-style: none; /* sem bolinhas nem números: cada lista desenha o próprio visual */
+}
+
+/* Ícones SVG: por padrão, do tamanho da letra ao redor */
+.icone {
+  display: inline-flex;
+  width: 1.25em;
+  height: 1.25em;
+  flex-shrink: 0;
+}
+
+.icone svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Botões que só têm ícone: o ícone fica centralizado.
+   :where() zera a especificidade desta regra. Sem ele, ela "ganhava" de
+   regras como .chat__voltar { display: none } e a seta aparecia no computador */
+:where(button:has(> .icone:only-child)) {
+  display: inline-grid;
+  place-items: center;
+}
+
+/* Visível só para leitores de tela */
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Contorno visível ao navegar com Tab */
+:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   3. AVATAR (bolinha com a inicial)
+   ========================================================= */
+.avatar {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--avatar-fundo);
+  color: var(--avatar-texto);
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+/* Grupo: avatar quadrado arredondado, para diferenciar de contato */
+.avatar--grupo {
+  border-radius: 12px;
+  background: var(--avatar-grupo);
+}
+
+/* Avatar colorido: o JS coloca --avatar-matiz no elemento (ex.: 140)
+   e a classe avatar--cor. hsl() = matiz, saturação, luminosidade.
+   Fica DEPOIS de .avatar--grupo para vencer quando as duas valem
+   (mesma especificidade: ganha a que vem por último no arquivo) */
+.avatar--cor {
+  background: hsl(var(--avatar-matiz) var(--avatar-fundo-sat) var(--avatar-fundo-luz));
+  color: hsl(var(--avatar-matiz) var(--avatar-letra-sat) var(--avatar-letra-luz));
+}
+
+/* =========================================================
+   4. BARRA SUPERIOR DA PÁGINA
+   ========================================================= */
+.topo-app {
+  height: var(--altura-topo);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* logo na esquerda, atendente na direita */
+  padding: 0 20px;
+  background: var(--fundo-topo);
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-topo);
+}
+
+.topo-app__esquerda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topo-app__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.topo-app__logo .icone {
+  width: 24px;
+  height: 24px;
+}
+
+.topo-app__direita {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Botão ☀️/🌙 de trocar o tema */
+.botao-tema {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--texto-topo);
+}
+
+.botao-tema:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.botao-tema .icone {
+  width: 20px;
+  height: 20px;
+}
+
+.atendente-area {
+  position: relative; /* referência para o menu de simular login */
+}
+
+.atendente-logado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 24px;
+  color: var(--texto-topo);
+}
+
+.atendente-logado:hover,
+.atendente-logado[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Menu de simular login: abre embaixo do nome, alinhado à direita */
+.menu-atendente {
+  top: calc(100% + 8px);
+  right: 0;
+  color: var(--texto);
+}
+
+.menu-atendente__titulo {
+  padding: 6px 16px 8px;
+  font-size: 12px;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.atendente-logado .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+/* =========================================================
+   5. ESTRUTURA EM COLUNAS
+   ========================================================= */
+.app {
+  flex: 1;
+  min-height: 0; /* permite que as colunas tenham rolagem própria */
+  display: flex;
+}
+
+.barra-lateral {
+  width: var(--largura-lateral);
+  flex-shrink: 0;
+  background: var(--fundo-painel);
+  border-right: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.painel-conversas,
+.painel-contatos {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.painel-conversas__topo,
+.painel-contatos__topo,
+.painel-dados__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.painel-conversas__topo {
+  justify-content: space-between;
+}
+
+.painel-conversas__topo h2,
+.painel-contatos__topo h2,
+.painel-dados__topo h2 {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#botao-abrir-contatos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: var(--destaque-suave);
+  color: var(--destaque-forte);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#botao-fechar-contatos,
+#botao-fechar-dados {
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+#botao-fechar-contatos:hover,
+#botao-fechar-dados:hover {
+  background: var(--fundo-hover);
+}
+
+/* Contador total de não lidas (ao lado de "Conversas") */
+.contador-total {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
+}
+
+/* =========================================================
+   6. BUSCA E FILTROS
+   ========================================================= */
+.busca {
+  position: relative; /* referência para a lupa */
+  padding: 0 16px 10px;
+}
+
+/* Lupa dentro do campo, à esquerda */
+.busca__icone {
+  position: absolute;
+  left: 28px;
+  top: 9px;
+  color: var(--texto-suave);
+  pointer-events: none; /* clicar na lupa = clicar no campo */
+}
+
+.busca input {
+  width: 100%;
+  padding: 9px 14px 9px 38px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--fundo-hover);
+}
+
+.busca input:focus {
+  outline: none;
+  border-color: var(--destaque);
+  background: var(--fundo-painel);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap; /* não cabe? quebra a linha: nenhum filtro fica escondido */
+  gap: 6px;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.filtro {
+  flex-shrink: 0; /* não deixa o botão espremer */
+  white-space: nowrap;
+  padding: 5px 12px;
+  border-radius: 16px;
+  background: var(--fundo-hover);
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+.filtro:hover {
+  background: var(--fundo-ativo);
+}
+
+.filtro.ativo {
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+}
+
+/* O seletor de etiqueta com a mesma cara de um filtro */
+.filtro--select {
+  appearance: none; /* tira a setinha padrão do navegador */
+  border: none;
+  font-family: inherit;
+  max-width: 150px;
+  cursor: pointer;
+}
+
+.filtro--select:focus-visible {
+  outline: 2px solid var(--destaque);
+}
+
+/* =========================================================
+   7. LISTA DE CONVERSAS (itens criados pelo JS)
+   ========================================================= */
+.lista-conversas,
+.lista-contatos {
+  flex: 1;
+  overflow-y: auto; /* só a lista rola, o topo fica parado */
+}
+
+.conversa,
+.contato {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--borda);
+}
+
+.conversa:hover,
+.contato:hover {
+  background: var(--fundo-hover);
+}
+
+.conversa--ativa {
+  background: var(--fundo-ativo);
+}
+
+.conversa__info,
+.contato__info {
+  flex: 1;
+  min-width: 0; /* necessário para o "..." funcionar dentro do flex */
+}
+
+.conversa__nome,
+.contato__nome {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversa__previa,
+.contato__numero {
+  font-size: 14px;
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* corta textos longos com "..." */
+}
+
+.conversa__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.conversa__hora {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+/* Conversa com não lidas: hora e nome em destaque */
+.conversa--nao-lida .conversa__hora {
+  color: var(--destaque);
+  font-weight: 600;
+}
+
+.conversa--nao-lida .conversa__nome {
+  font-weight: 700;
+}
+
+.conversa__indicadores {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Bolinha com o número de não lidas */
+.conversa__badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* "Marcada como não lida": bolinha azul sem número,
+   para diferenciar de mensagem nova (cor de destaque) */
+.conversa__ponto {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--azul-lido);
+}
+
+/* Conversa marcada manualmente: hora em azul, combinando com a bolinha */
+.conversa--marcada .conversa__hora {
+  color: var(--azul-lido);
+  font-weight: 600;
+}
+
+.conversa__fixada {
+  width: 15px;
+  height: 15px;
+  color: var(--texto-suave);
+}
+
+/* "Conversar com +55..." (número não salvo) */
+.contato--novo .avatar {
+  background: var(--azul-lido);
+  font-size: 22px;
+}
+
+.contato--novo .contato__nome {
+  color: var(--destaque);
+}
+
+/* Mensagem quando a busca ou o filtro não encontram nada */
+.lista-vazia {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+/* ----- Etiquetas coloridas ----- */
+/* A cor vem do dados.json: o JS coloca em --cor-etiqueta, e o
+   color-mix cria um fundo bem clarinho da mesma cor */
+.etiqueta {
+  display: inline-block;
+  min-width: 0; /* pode encolher dentro do flex... */
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis; /* ...e mostra "..." em vez de cortar no meio */
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--cor-etiqueta);
+  background: color-mix(in srgb, var(--cor-etiqueta) 16%, transparent);
+}
+
+.conversa__etiquetas,
+.chat__etiquetas {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.chat__etiquetas {
+  margin-top: 0;
+}
+
+.chat__etiquetas:empty {
+  display: none; /* sem etiquetas: não ocupa espaço */
+}
+
+/* ----- Conversa resolvida: mais apagada na lista ----- */
+.conversa--resolvida .avatar,
+.conversa--resolvida .conversa__info {
+  opacity: 0.55;
+}
+
+/* Selos de status: discretos, com contorno, para não competir com as etiquetas */
+.selo {
+  flex-shrink: 0; /* o status nunca é cortado; quem encolhe são as etiquetas */
+  padding: 0 7px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+.selo--resolvida {
+  color: var(--sucesso);
+  border-color: color-mix(in srgb, var(--sucesso) 40%, transparent);
+}
+
+.selo--mais {
+  border-style: dashed;
+}
+
+/* =========================================================
+   8. CHAT
+   ========================================================= */
+.chat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo-chat);
+}
+
+.chat__vazio {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--texto-suave);
+}
+
+/* ----- Tela "Nenhuma conversa aberta" ----- */
+.vazio {
+  max-width: 360px;
+  padding: 24px;
+  text-align: center;
+}
+
+.vazio__icone {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--destaque-suave);
+  color: var(--texto-suave);
+  display: grid;
+  place-items: center;
+}
+
+.vazio__icone .icone {
+  width: 40px;
+  height: 40px;
+}
+
+.vazio__titulo {
+  font-size: 20px;
+  color: var(--texto);
+  margin-bottom: 8px;
+}
+
+.vazio__texto {
+  line-height: 1.5;
+}
+
+.vazio__resumo {
+  margin-top: 16px;
+  font-weight: 600;
+  color: var(--destaque);
+}
+
+.vazio__dica {
+  margin-top: 24px;
+  font-size: 13px;
+}
+
+/* <kbd> = tecla do teclado: desenhada como uma teclinha */
+kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--borda);
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  background: var(--fundo-painel);
+  color: var(--texto);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chat__aberto {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--fundo-painel);
+  border-bottom: 1px solid var(--borda);
+}
+
+.chat__info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Botão voltar: escondido no computador, aparece no celular */
+.chat__voltar {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 20px;
+}
+
+/* Nome e etiquetas na mesma linha: o topo do chat ficou com 2 linhas em vez de 3 */
+.chat__linha-nome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chat__nome {
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat__detalhe {
+  font-size: 13px;
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----- Menu dos 3 pontos ----- */
+.menu {
+  position: relative; /* referência para posicionar a lista */
+}
+
+.menu__botao {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.menu__botao:hover,
+.menu__botao[aria-expanded="true"] {
+  background: var(--fundo-hover);
+}
+
+.menu__lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  min-width: 240px;
+  padding: 6px 0;
+  background: var(--fundo-painel);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.menu__lista button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px; /* espaço entre o ícone e o texto */
+  padding: 9px 16px;
+  white-space: nowrap; /* cada opção em uma linha só */
+  text-align: left;
+}
+
+/* Ícones das opções: discretos, para o texto continuar sendo o principal */
+.menu__lista button .icone {
+  width: 18px;
+  height: 18px;
+  color: var(--texto-suave);
+}
+
+.menu__lista .perigo .icone {
+  color: var(--alerta);
+}
+
+/* Linha que separa os grupos de opções */
+.menu__divisoria {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--borda);
+}
+
+.menu__lista button:hover {
+  background: var(--fundo-hover);
+}
+
+/* ----- Área das mensagens ----- */
+.chat__mensagens {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 6%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Separador de dia: "Hoje", "Ontem", "08/10/2026" */
+.dia {
+  align-self: center;
+  margin: 12px 0 8px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--fundo-painel);
+  color: var(--texto-suave);
+  font-size: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Balão de mensagem */
+.mensagem {
+  max-width: 65%;
+  padding: 7px 10px 5px;
+  border-radius: var(--raio);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.mensagem--recebida {
+  align-self: flex-start; /* encosta na esquerda */
+  background: var(--balao-recebido);
+  border-top-left-radius: 2px;
+}
+
+.mensagem--enviada {
+  align-self: flex-end; /* encosta na direita */
+  background: var(--balao-enviado);
+  border-top-right-radius: 2px;
+}
+
+/* Nome de quem falou (grupos) ou de qual atendente respondeu */
+.mensagem__autor {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--destaque-forte);
+  margin-bottom: 2px;
+}
+
+/* Rodapé do balão: hora + tracinhos, alinhados à direita */
+.mensagem__rodape {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.mensagem__hora {
+  font-size: 11px;
+  color: var(--texto-suave);
+}
+
+/* Tracinhos ✓✓: cinza = entregue, azul = lida pelo cliente */
+.mensagem__status {
+  font-size: 12px;
+  letter-spacing: -3px; /* aproxima os dois ✓ */
+  color: var(--texto-suave);
+}
+
+.mensagem__status--lida {
+  color: var(--azul-lido);
+}
+
+/* ----- Botão ↩ "Responder" de cada balão ----- */
+.mensagem {
+  position: relative; /* referência para posicionar o botão ↩ */
+}
+
+.mensagem__responder {
+  position: absolute;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--fundo-painel);
+  color: var(--texto-suave);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--borda);
+  opacity: 0; /* invisível até passar o mouse */
+  transition: opacity 0.15s;
+}
+
+/* Recebida: botão do lado direito do balão. Enviada: do lado esquerdo */
+.mensagem--recebida .mensagem__responder { right: -34px; }
+.mensagem--enviada .mensagem__responder { left: -34px; }
+
+.mensagem:hover .mensagem__responder,
+.mensagem__responder:focus-visible {
+  opacity: 1;
+}
+
+/* Celular não tem "passar o mouse": o botão fica sempre visível, mais discreto */
+@media (hover: none) {
+  .mensagem__responder { opacity: 0.6; }
+}
+
+/* ----- Citação (dentro do balão e na barra "Respondendo a...") ----- */
+.citacao {
+  min-width: 0;
+  padding: 4px 8px;
+  border-left: 4px solid var(--destaque);
+  border-radius: 6px;
+  background: var(--fundo-citacao);
+  font-size: 13px;
+}
+
+.mensagem .citacao {
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.citacao__autor {
+  font-weight: 600;
+  color: var(--destaque-forte);
+}
+
+.citacao__texto {
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.citacao-envio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 0;
+  background: var(--fundo-painel);
+  border-top: 1px solid var(--borda);
+}
+
+.citacao-envio .citacao {
+  flex: 1;
+}
+
+#botao-cancelar-citacao {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+#botao-cancelar-citacao:hover {
+  background: var(--fundo-hover);
+}
+
+/* Barra "Editando mensagem": azul, para não confundir com "Respondendo a" (destaque) */
+.edicao-envio .citacao {
+  border-left-color: var(--azul-lido);
+}
+
+.edicao-envio .citacao__autor {
+  color: var(--azul-lido);
+}
+
+/* Marca "editada" ao lado da hora (passe o mouse para ver o original) */
+.mensagem__editada {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--texto-suave);
+  cursor: help;
+}
+
+/* Mensagem apagada: só o aviso, em itálico e apagado */
+.mensagem--apagada .mensagem__texto {
+  font-style: italic;
+  color: var(--texto-suave);
+}
+
+/* Ao clicar numa citação, a mensagem original pisca para você achá-la */
+.mensagem--destaque {
+  animation: destacar 1.6s ease;
+}
+
+@keyframes destacar {
+  0%, 60% { box-shadow: 0 0 0 3px var(--azul-lido); }
+  100% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+}
+
+/* ----- Sugestões de respostas rápidas ----- */
+.sugestoes {
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--fundo-painel);
+  border-top: 1px solid var(--borda);
+}
+
+.sugestao {
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.sugestao:hover,
+.sugestao--ativa {
+  background: var(--fundo-ativo);
+}
+
+.sugestao__atalho {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--destaque);
+}
+
+.sugestao__texto {
+  min-width: 0;
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----- Eventos do sistema: "Carla assumiu a conversa" ----- */
+.evento {
+  align-self: center;
+  margin: 6px 0;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: var(--fundo-citacao);
+  color: var(--texto-suave);
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ----- Nota interna: amarelo, centralizada, borda tracejada ----- */
+.mensagem--nota {
+  align-self: center;
+  max-width: 80%;
+  background: var(--nota-fundo);
+  border: 1px dashed var(--nota-borda);
+  box-shadow: none;
+}
+
+.mensagem--nota .mensagem__autor {
+  color: var(--nota-texto);
+}
+
+/* ----- Faixa de atendimento (acima do campo de mensagem) ----- */
+.faixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--destaque-suave);
+  color: var(--destaque-forte);
+  font-size: 14px;
+}
+
+/* Variação: conversa resolvida */
+.faixa--resolvida {
+  background: var(--fundo-hover);
+  color: var(--destaque-forte);
+}
+
+/* Variação: a conversa é de outro atendente (mais discreta) */
+.faixa--outro {
+  background: var(--fundo-hover);
+  color: var(--texto-suave);
+}
+
+#botao-faixa-assumir {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+}
+
+/* ----- Botão 📝 e "modo nota" do campo de envio ----- */
+.botao-nota {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: var(--texto-suave);
+}
+
+.botao-nota:hover {
+  background: var(--fundo-hover);
+  color: var(--texto);
+}
+
+.botao-nota[aria-pressed="true"] {
+  background: var(--nota-fundo);
+  color: var(--nota-texto);
+}
+
+/* No modo nota, o campo fica amarelo: impossível confundir com mensagem ao cliente */
+.chat__envio--nota input {
+  background: var(--nota-fundo);
+  border-color: var(--nota-borda);
+}
+
+.chat__envio--nota #botao-enviar {
+  background: var(--nota-borda);
+}
+
+/* ----- Janela de etiquetas ----- */
+.etiquetas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+/* Cada linha: [checkbox + etiqueta] e, nas personalizáveis, o botão ✏️ */
+.etiquetas__linha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+
+.etiquetas__linha:hover {
+  background: var(--fundo-hover);
+}
+
+.etiquetas__lista label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.etiquetas__editar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.etiquetas__editar:hover {
+  opacity: 1;
+  background: var(--fundo-ativo);
+}
+
+/* Campo de renomear: aparece no lugar da etiqueta, com a mesma cor */
+.etiquetas__input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 2px solid var(--cor-etiqueta);
+  border-radius: 8px;
+  background: var(--fundo-painel);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+}
+
+.etiquetas__input:focus {
+  outline: none;
+}
+
+.etiquetas__erro {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--alerta);
+}
+
+.etiquetas__lista input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--destaque); /* pinta o checkbox com a cor do app */
+}
+
+.confirmacao__botoes .confirmacao__ok {
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+}
+
+.confirmacao__botoes .confirmacao__ok:hover {
+  background: var(--destaque-forte);
+}
+
+/* ----- Lista do "Transferir conversa" ----- */
+.transferir__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.transferir__lista button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.transferir__lista button:hover {
+  background: var(--fundo-hover);
+}
+
+.transferir__lista .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.transferir__fila .avatar {
+  background: var(--texto-suave);
+}
+
+/* ----- Mensagem de áudio ----- */
+.audio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.audio__play {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  flex-shrink: 0;
+}
+
+.audio__barra {
+  flex: 1;
+  height: 20px; /* área de clique confortável... */
+  border-top: 8px solid transparent; /* ...mas a barra desenhada continua fininha (4px) */
+  border-bottom: 8px solid transparent;
+  background: var(--borda);
+  background-clip: padding-box; /* o fundo não pinta embaixo das bordas transparentes */
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Parte preenchida da barra: o JS muda a largura conforme o áudio toca */
+.audio__progresso {
+  width: 0%;
+  height: 100%;
+  background: var(--destaque);
+  transition: width 0.25s linear; /* a barra anda suave, não aos pulos */
+}
+
+.audio__duracao {
+  min-width: 32px;
+  font-variant-numeric: tabular-nums; /* o tempo não "treme" enquanto conta */
+}
+
+.audio__duracao {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+/* ----- Campo de envio ----- */
+.chat__envio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  /* No iPhone, desconta a barrinha de gestos (em outros aparelhos o valor é 0) */
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  background: var(--fundo-painel);
+  border-top: 1px solid var(--borda);
+}
+
+.chat__envio input {
+  flex: 1;
+  /* Um <input> tem largura mínima padrão (uns 20 caracteres). Sem o
+     min-width: 0, no celular ele não encolhe e empurra o 🎤 para fora da tela */
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--borda);
+  border-radius: 20px;
+  background: var(--fundo-hover);
+}
+
+.chat__envio input:focus {
+  outline: none;
+  border-color: var(--destaque);
+}
+
+#botao-audio,
+#botao-enviar {
+  height: 42px;
+  min-width: 42px;
+  padding: 0 14px;
+  border-radius: 21px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+}
+
+#botao-audio:hover,
+#botao-enviar:hover {
+  background: var(--destaque-forte);
+}
+
+/* ----- Barra de gravação ----- */
+.gravacao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  background: var(--fundo-painel);
+  border-top: 1px solid var(--borda);
+}
+
+.gravacao__ponto {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--alerta);
+  animation: piscar 1s infinite;
+}
+
+.gravacao__tempo {
+  flex: 1;
+  font-variant-numeric: tabular-nums; /* números com a mesma largura: o tempo não "pula" */
+}
+
+#botao-cancelar-audio {
+  color: var(--alerta);
+  padding: 8px 12px;
+}
+
+#botao-enviar-audio {
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+}
+
+@keyframes piscar {
+  50% { opacity: 0.2; }
+}
+
+/* =========================================================
+   9. PAINEL DE DADOS DO CONTATO
+   ========================================================= */
+.painel-dados {
+  width: var(--largura-dados);
+  flex-shrink: 0;
+  background: var(--fundo-painel);
+  border-left: 1px solid var(--borda);
+  overflow-y: auto;
+}
+
+.painel-dados__conteudo {
+  padding: 8px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.painel-dados__conteudo .avatar {
+  width: 96px;
+  height: 96px;
+  font-size: 36px;
+  align-self: center;
+}
+
+.painel-dados__nome {
+  text-align: center;
+  font-size: 20px;
+  margin-top: -6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--borda);
+}
+
+/* Participantes do grupo */
+.dado__lista {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dado__lista li {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--fundo-hover);
+}
+
+/* Cada linha: rótulo pequeno em cima, valor embaixo */
+.dado__rotulo {
+  font-size: 12px;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dado__valor {
+  margin-top: 2px;
+}
+
+/* ----- Mini menu do botão direito ----- */
+/* Reaproveita o visual do .menu__lista, mas fica preso à tela (fixed):
+   o JS coloca top/left na posição do mouse */
+.menu-contexto {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  z-index: 50;
+}
+
+.menu__lista .perigo {
+  color: var(--alerta);
+}
+
+/* Linha separando a ferramenta de teste das opções normais */
+.menu__separador {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--borda);
+}
+
+.menu__lista .menu__teste {
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+/* ----- Linha "Arquivadas" no topo da lista ----- */
+.arquivadas {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-suave);
+}
+
+.arquivadas:hover {
+  background: var(--fundo-hover);
+}
+
+.arquivadas__icone {
+  width: 42px;
+  text-align: center;
+  font-size: 20px;
+}
+
+.arquivadas__total {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+/* Com mensagens não lidas dentro das arquivadas, o número fica em destaque */
+.arquivadas__total--destaque {
+  color: var(--destaque);
+  font-weight: 700;
+}
+
+/* Cabeçalho quando você está DENTRO das arquivadas */
+.arquivadas--cabecalho {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+.arquivadas__dica {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+
+/* =========================================================
+   9.1 CONFIRMAÇÃO DE EXCLUSÃO (<dialog>)
+   ========================================================= */
+.confirmacao {
+  margin: auto; /* o reset do topo zerou a margem; sem isto o dialog não centraliza */
+  width: calc(100% - 32px);
+  max-width: 380px;
+  padding: 24px;
+  border: none;
+  border-radius: var(--raio);
+  background: var(--fundo-painel);
+  color: var(--texto);
+  box-shadow: var(--sombra);
+}
+
+/* Fundo escurecido atrás da janela */
+.confirmacao::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.confirmacao__titulo {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.confirmacao__texto {
+  color: var(--texto-suave);
+  line-height: 1.5;
+}
+
+.confirmacao__botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.confirmacao__botoes button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.confirmacao__botoes button:hover {
+  background: var(--fundo-hover);
+}
+
+.confirmacao__botoes .confirmacao__excluir {
+  background: var(--alerta);
+  color: #fff;
+}
+
+.confirmacao__botoes .confirmacao__excluir:hover {
+  background: #b83636;
+}
+
+/* =========================================================
+   10. AVISO FLUTUANTE
+   ========================================================= */
+.aviso {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: var(--raio);
+  background: var(--texto);
+  color: var(--fundo-painel);
+  box-shadow: var(--sombra);
+  z-index: 100;
+}
+
+/* =========================================================
+   11. CELULAR: uma coluna por vez
+   ========================================================= */
+@media (max-width: 768px) {
+  .barra-lateral {
+    width: 100%;
+    border-right: none;
+  }
+
+  /* Por padrão o chat fica escondido no celular */
+  .chat {
+    display: none;
+  }
+
+  /* Com uma conversa aberta, o JS coloca a classe "app--chat-aberto":
+     a lista some e o chat ocupa a tela */
+  .app--chat-aberto .barra-lateral {
+    display: none;
+  }
+
+  .app--chat-aberto .chat {
+    display: flex;
+  }
+
+  /* Dados do contato cobrem a tela inteira */
+  .painel-dados {
+    position: fixed;
+    inset: var(--altura-topo) 0 0 0;
+    width: 100%;
+    z-index: 20;
+  }
+
+  .chat__voltar {
+    display: grid;
+    place-items: center;
+  }
+
+  /* O Safari do iPhone dá zoom automático ao tocar num campo com letra
+     menor que 16px. Com 16px, a tela fica parada como deve */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Campo de envio um pouco mais compacto na tela estreita */
+  .chat__envio {
+    gap: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  /* Lista de conversas também respeita a barrinha de gestos */
+  .lista-conversas,
+  .lista-contatos {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Tela estreita: o nome do contato vale mais que as etiquetas no topo
+     (elas continuam na lista e no painel de dados) */
+  .chat__etiquetas {
+    display: none;
+  }
+
+  .mensagem {
+    max-width: 85%;
+  }
+
+  .chat__mensagens {
+    padding: 12px;
+  }
+}
+
+/* =========================================================
+   12. CARTÃO DE PRÉVIA (passar o mouse numa conversa)
+   ========================================================= */
+.conversa {
+  transition: background 0.15s;
+}
+
+.cartao-previa {
+  position: fixed; /* preso à tela, o JS coloca top/left */
+  z-index: 40;
+  width: 320px;
+  padding: 14px;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: var(--fundo-painel);
+  box-shadow: var(--sombra);
+  pointer-events: none; /* só informa: não atrapalha o mouse */
+  animation: surgir 0.14s ease-out;
+}
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateX(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.cartao-previa__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cartao-previa__textos {
+  min-width: 0;
+}
+
+.cartao-previa__nome {
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere; /* nome enorme quebra em vez de vazar */
+}
+
+.cartao-previa__detalhe {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.cartao-previa__selos {
+  display: flex;
+  flex-wrap: wrap; /* aqui cabem TODAS as etiquetas */
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.cartao-previa__selos .etiqueta {
+  max-width: none;
+}
+
+.cartao-previa__mensagem {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--fundo-hover);
+}
+
+.cartao-previa__autor {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--destaque-forte);
+}
+
+.cartao-previa__texto {
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap; /* respeita quebras de linha da mensagem */
+  overflow-wrap: anywhere;
+  /* Mensagens muito longas: no máximo 8 linhas, com "..." */
+  display: -webkit-box;
+  -webkit-line-clamp: 8;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cartao-previa__hora {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--texto-suave);
+  text-align: right;
+}
+
+.cartao-previa__rodape {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.cartao-previa__pendente {
+  font-weight: 700;
+  color: var(--destaque-forte);
+}
+
+/* ----- Tamanho dos ícones em cada lugar ----- */
+.menu__botao .icone,
+#botao-fechar-contatos .icone,
+#botao-fechar-dados .icone,
+.chat__voltar .icone {
+  width: 22px;
+  height: 22px;
+}
+
+.mensagem__responder .icone,
+.audio__play .icone {
+  width: 16px;
+  height: 16px;
+}
+
+#botao-audio .icone,
+#botao-enviar .icone,
+.botao-nota .icone {
+  width: 21px;
+  height: 21px;
+}
+
+.arquivadas__icone.icone {
+  width: 42px; /* mesma largura do avatar, para alinhar com a lista */
+  height: 20px;
+}
+
+.etiquetas__editar .icone {
+  width: 16px;
+  height: 16px;
+}
+
+/* =========================================================
+   13. PAINEL DE SUPERVISÃO
+   ========================================================= */
+
+/* Botão no topo (só aparece para supervisão e diretoria) */
+.botao-supervisao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--texto-topo) 30%, transparent);
+  border-radius: 17px;
+  color: var(--texto-topo);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.botao-supervisao:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.botao-supervisao .icone {
+  width: 18px;
+  height: 18px;
+}
+
+/* Mensagem apagada: o conteúdo original (só supervisão vê) */
+.mensagem__original {
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-left: 3px solid var(--alerta);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--alerta) 10%, transparent);
+  font-size: 13px;
+  color: var(--texto-suave);
+  text-decoration: line-through;
+}
+
+/* ----- A tela do painel ----- */
+.supervisao {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto; /* o painel rola inteiro; o topo da página fica parado */
+  padding: 24px max(16px, calc((100% - 960px) / 2)); /* conteúdo centralizado até 960px */
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  background: var(--fundo-app);
+}
+
+.supervisao__topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.supervisao__titulos {
+  flex: 1;
+  min-width: 0;
+}
+
+.supervisao__titulos h1 {
+  font-size: 22px;
+}
+
+.supervisao__titulos p {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--texto-suave);
+}
+
+.supervisao__voltar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.supervisao__voltar:hover {
+  background: var(--fundo-hover);
+}
+
+.supervisao__voltar .icone {
+  width: 22px;
+  height: 22px;
+}
+
+/* Botão secundário: só contorno */
+.botao-contorno {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--borda);
+  border-radius: 19px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.botao-contorno:hover {
+  background: var(--fundo-hover);
+}
+
+.botao-contorno .icone {
+  width: 18px;
+  height: 18px;
+}
+
+/* ----- Cartões de resumo ----- */
+.supervisao__resumo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* três colunas do mesmo tamanho */
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.resumo-cartao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--cor-acao);
+  border-radius: var(--raio);
+  background: var(--fundo-painel);
+  text-align: left;
+}
+
+.resumo-cartao:hover {
+  background: var(--fundo-hover);
+}
+
+/* Cartão "ligado" como filtro */
+.resumo-cartao[aria-pressed="true"] {
+  border-color: var(--cor-acao);
+  background: color-mix(in srgb, var(--cor-acao) 10%, var(--fundo-painel));
+}
+
+.resumo-cartao__numero {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.resumo-cartao__rotulo {
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+/* Uma cor por tipo de ação, usada no cartão e na borda do registro */
+.resumo-cartao--edicao,
+.registro--edicao { --cor-acao: var(--azul-lido); }
+.resumo-cartao--exclusao,
+.registro--exclusao { --cor-acao: var(--alerta); }
+.resumo-cartao--conversa,
+.registro--conversa { --cor-acao: #e0a030; }
+
+/* ----- Filtros ----- */
+.supervisao__filtros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.5fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.campo-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campo-filtro span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.campo-filtro select,
+.campo-filtro input {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo-painel);
+  color: var(--texto);
+}
+
+.campo-filtro select:focus,
+.campo-filtro input:focus {
+  outline: none;
+  border-color: var(--destaque);
+}
+
+/* ----- Lista de registros ----- */
+.supervisao__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.registro {
+  padding: 14px 16px;
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--cor-acao);
+  border-radius: var(--raio);
+  background: var(--fundo-painel);
+}
+
+.registro__topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.registro__avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.registro__frase {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.registro__papel {
+  margin: 0 4px 0 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--fundo-hover);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.registro__papel:empty {
+  display: none;
+}
+
+.registro__quando {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.registro__onde {
+  margin: 6px 0 10px 42px; /* alinha com o texto, depois do avatar */
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.registro__link {
+  color: var(--texto);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.registro__link:hover {
+  color: var(--destaque-forte);
+}
+
+.registro__diff,
+.registro__apagado,
+.registro__copia {
+  margin-left: 42px;
+}
+
+/* Antes e depois lado a lado */
+.registro__diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.registro__antes,
+.registro__depois,
+.registro__apagado {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.registro__antes,
+.registro__apagado {
+  background: color-mix(in srgb, var(--alerta) 10%, transparent);
+}
+
+.registro__depois {
+  background: color-mix(in srgb, var(--sucesso) 12%, transparent);
+}
+
+.registro__rotulo {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--texto-suave);
+}
+
+/* <del> já vem riscado e <ins> sublinhado: deixamos só o risco */
+.registro__antes del {
+  text-decoration-color: var(--alerta);
+}
+
+.registro__depois ins {
+  text-decoration: none;
+}
+
+/* Cópia da conversa excluída (abre e fecha) */
+.registro__copia summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.registro__copia ol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--fundo-hover);
+  font-size: 13px;
+}
+
+.registro__copia li {
+  display: flex;
+  flex-direction: column;
+}
+
+.registro__copia-quem {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.supervisao__nota {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--texto-suave);
+  text-align: center;
+}
+
+/* ----- Painel no celular ----- */
+@media (max-width: 768px) {
+  .supervisao {
+    padding: 16px;
+  }
+
+  .botao-supervisao__texto {
+    display: none; /* no topo só cabe o ícone */
+  }
+
+  .botao-supervisao {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .supervisao__topo {
+    flex-wrap: wrap;
+  }
+
+  .supervisao__resumo {
+    gap: 8px;
+  }
+
+  .resumo-cartao {
+    padding: 10px 12px;
+  }
+
+  .resumo-cartao__numero {
+    font-size: 22px;
+  }
+
+  .supervisao__filtros {
+    grid-template-columns: 1fr 1fr; /* dois por linha */
+  }
+
+  .campo-filtro--busca {
+    grid-column: 1 / -1; /* a busca ocupa a linha inteira */
+  }
+
+  /* Antes e depois, um embaixo do outro; sem o recuo do avatar */
+  .registro__diff {
+    grid-template-columns: 1fr;
+  }
+
+  .registro__onde,
+  .registro__diff,
+  .registro__apagado,
+  .registro__copia {
+    margin-left: 0;
+  }
+
+  .registro__topo {
+    flex-wrap: wrap;
+  }
+
+  .registro__quando {
+    width: 100%;
+    padding-left: 42px;
+  }
+}
