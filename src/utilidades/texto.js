@@ -43,3 +43,16 @@ export function formatarDuracao(segundos) {
   const seg = String(segundos % 60).padStart(2, "0");
   return `${min}:${seg}`;
 }
+
+/* "21999998888" -> "+55 21 99999-8888"
+   Números de 10 ou 11 dígitos (DDD + número) ganham o 55 do Brasil */
+export function formatarNumero(digitos) {
+  if (digitos.length === 10 || digitos.length === 11) digitos = "55" + digitos;
+  if (digitos.length === 13) {
+    return `+${digitos.slice(0, 2)} ${digitos.slice(2, 4)} ${digitos.slice(4, 9)}-${digitos.slice(9)}`;
+  }
+  if (digitos.length === 12) {
+    return `+${digitos.slice(0, 2)} ${digitos.slice(2, 4)} ${digitos.slice(4, 8)}-${digitos.slice(8)}`;
+  }
+  return `+${digitos}`;
+}

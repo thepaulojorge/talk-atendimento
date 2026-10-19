@@ -4,16 +4,18 @@ import {
   contarNaoLidas,
   estaResolvida,
   nomeDaConversa,
-  textoPrevia,
   ultimaMensagem,
 } from "../utilidades/conversas.js";
+import { previaParaLista } from "../utilidades/filtros.js";
 import { formatarHoraLista } from "../utilidades/datas.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
 
 /* Uma conversa na lista. Compare com a antiga criarItemConversa():
    a lógica é a mesma, mas o HTML aparece escrito do jeito que vai ficar */
-export default function ItemConversa({ conversa }) {
+/* Props novas: termoBusca (para a prévia com 🔍) e os avisos de mouse,
+   que o painel usa para o cartão de prévia */
+export default function ItemConversa({ conversa, termoBusca = "", aoEntrarMouse, aoSairMouse }) {
   const { estado, despachar } = useEstado();
 
   const nome = nomeDaConversa(conversa, estado.contatos);
@@ -51,14 +53,23 @@ export default function ItemConversa({ conversa }) {
   }
 
   return (
-    <li className={classes} tabIndex={0} onClick={abrir} onKeyDown={aoApertarTecla}>
+    <li
+      className={classes}
+      tabIndex={0}
+      onClick={abrir}
+      onKeyDown={aoApertarTecla}
+      /* onMouseEnter só dispara ao ENTRAR no item (não a cada filho, como o
+         "mouseover" da versão antiga). evento.currentTarget = o próprio <li> */
+      onMouseEnter={(evento) => aoEntrarMouse?.(conversa.id, evento.currentTarget)}
+      onMouseLeave={aoSairMouse}
+    >
       <Avatar nome={nome} grupo={conversa.tipo === "grupo"} />
 
       <div className="conversa__info">
         <div className="conversa__nome">{nome}</div>
         {/* {} no JSX = "aqui entra um valor do JavaScript". O texto é
             colocado como TEXTO, nunca como HTML: o React já protege contra XSS */}
-        <div className="conversa__previa">{textoPrevia(conversa, estado)}</div>
+        <div className="conversa__previa">{previaParaLista(conversa, estado, termoBusca)}</div>
 
         {(temStatus || etiquetas.length > 0) && (
           <div className="conversa__etiquetas">

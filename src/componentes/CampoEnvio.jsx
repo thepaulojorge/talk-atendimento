@@ -218,6 +218,9 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
             value={texto}
             onChange={(evento) => mudarTexto(evento.target.value)}
             onKeyDown={aoApertarTecla}
+            /* Conversa nova (sem mensagens): o cursor já fica pronto para escrever.
+               Funciona porque o chat é recriado a cada conversa (a "key") */
+            autoFocus={conversa.mensagens.length === 0}
           />
 
           {/* Campo vazio: microfone. Com texto: enviar */}

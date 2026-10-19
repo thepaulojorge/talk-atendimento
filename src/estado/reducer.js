@@ -61,6 +61,45 @@ export function reducer(estado, acao) {
         })),
       };
 
+    /* Iniciar conversa pela aba de Contatos. A ação traz:
+       { contatoId, conversaId, novoContato? }
+       - novoContato: número não salvo; entra na lista com salvo: false
+       - já existe conversa com o contato? Reaproveita (e desarquiva)
+       - não existe? Cria uma vazia, já com quem iniciou como responsável */
+    case "iniciarConversa": {
+      const contatos = acao.novoContato ? [...estado.contatos, acao.novoContato] : estado.contatos;
+      const existente = estado.conversas.find((c) => c.tipo === "contato" && c.contatoId === acao.contatoId);
+
+      let conversas;
+      let id;
+      if (existente) {
+        id = existente.id;
+        // Procurou o contato de propósito: a conversa volta das arquivadas
+        conversas = mudarConversa(estado.conversas, id, (c) => ({ ...c, arquivada: false }));
+      } else {
+        id = acao.conversaId;
+        conversas = [
+          ...estado.conversas,
+          {
+            id,
+            tipo: "contato",
+            contatoId: acao.contatoId,
+            atendenteId: estado.atendenteLogadoId,
+            marcadaNaoLida: false,
+            arquivada: false,
+            status: "aberta",
+            etiquetas: [],
+            fixadaEm: null,
+            mensagens: [],
+          },
+        ];
+      }
+
+      /* Reaproveita a ação "abrirConversa" chamando o próprio reducer:
+         assim a regra "abrir = marcar como lida" fica num lugar só */
+      return reducer({ ...estado, contatos, conversas }, { tipo: "abrirConversa", id });
+    }
+
     case "fecharConversa":
       return { ...estado, conversaAbertaId: null };
 
