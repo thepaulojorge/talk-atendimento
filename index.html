@@ -9,6 +9,19 @@
     <meta name="description" content="Talk Atendimento: painel de atendimento via WhatsApp para equipes." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#000000" />
+
+    <!-- Aplica o tema salvo ANTES de a página aparecer: sem isso, quem usa
+         o tema claro veria um "piscar" preto enquanto o React carrega -->
+    <script>
+      try {
+        if (localStorage.getItem("talk-tema") === "claro") {
+          document.documentElement.dataset.tema = "claro";
+          document.querySelector('meta[name="theme-color"]').content = "#1f8f6a";
+        }
+      } catch {
+        // aba anônima ou armazenamento bloqueado: segue no tema preto
+      }
+    </script>
   </head>
   <body>
     <!-- O React desenha o app inteiro aqui dentro -->

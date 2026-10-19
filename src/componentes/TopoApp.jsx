@@ -6,10 +6,14 @@ import { PAPEIS } from "../utilidades/permissoes.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
 import MenuFlutuante from "./MenuFlutuante.jsx";
+import DialogoConfirmacao from "./DialogoConfirmacao.jsx";
+import { useTema } from "../hooks/useTema.js";
 
 /* A barra do topo: a marca (white-label) e quem está logado */
 export default function TopoApp() {
-  const { estado, despachar } = useEstado();
+  const { estado, despachar, restaurarExemplo } = useEstado();
+  const { tema, alternarTema } = useTema();
+  const [confirmandoRestaurar, setConfirmandoRestaurar] = useState(false);
   const atendente = buscarPorId(estado.atendentes, estado.atendenteLogadoId);
 
   /* ⚠️ SIMULAÇÃO de login: clicar no seu nome deixa "entrar" como outra
@@ -37,6 +41,14 @@ export default function TopoApp() {
     const atual = a.id === estado.atendenteLogadoId;
     return { id: a.id, rotulo: `${atual ? "✓ " : ""}${a.nome}${papel}`, acao: () => trocar(a.id) };
   });
+  // Separado das opções de login: volta tudo ao estado inicial
+  opcoes.push(
+    { divisoria: true },
+    { id: "restaurar", rotulo: "↺ Restaurar dados de exemplo", teste: true, acao: () => setConfirmandoRestaurar(true) }
+  );
+
+  // O botão mostra o tema para onde você VAI: no preto aparece o sol
+  const rotuloTema = tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro";
 
   return (
     <header className="topo-app">
@@ -48,6 +60,10 @@ export default function TopoApp() {
       </div>
 
       <div className="topo-app__direita">
+        <button type="button" className="botao-tema" aria-label={rotuloTema} title={rotuloTema} onClick={alternarTema}>
+          <Icone nome={tema === "claro" ? "lua" : "sol"} />
+        </button>
+
         {/* && no JSX: "se tiver atendente, mostra isto". Enquanto os dados
             carregam, a lista de atendentes está vazia e nada aparece */}
         {atendente && (
@@ -74,6 +90,17 @@ export default function TopoApp() {
           y={menu.y}
           ancora={botao}
           aoFechar={fecharMenu}
+        />
+      )}
+
+      {confirmandoRestaurar && (
+        <DialogoConfirmacao
+          titulo="Restaurar dados de exemplo?"
+          texto="Tudo o que foi feito neste navegador (mensagens, edições, etiquetas, conversas novas) será apagado e os exemplos voltam ao início."
+          rotulo="Restaurar"
+          perigo
+          aoConfirmar={restaurarExemplo}
+          aoFechar={() => setConfirmandoRestaurar(false)}
         />
       )}
     </header>

@@ -6,6 +6,7 @@ import { buscarPorId, contarNaoLidas, estaResolvida, nomeDaConversa } from "../u
 import { novoId } from "../utilidades/ids.js";
 import DialogoConfirmacao from "../componentes/DialogoConfirmacao.jsx";
 import DialogoTransferir from "../componentes/DialogoTransferir.jsx";
+import DialogoEtiquetas from "../componentes/DialogoEtiquetas.jsx";
 
 /* ⚠️ SIMULAÇÃO: frases que o "cliente" manda quando você testa */
 const FRASES_DE_TESTE = [
@@ -34,6 +35,7 @@ export function useAcoesConversa() {
   const { estado, despachar } = useEstado();
   const [excluindoId, setExcluindoId] = useState(null);
   const [transferindoId, setTransferindoId] = useState(null);
+  const [etiquetandoId, setEtiquetandoId] = useState(null);
 
   // Ids e horários nascem aqui, nos eventos (o reducer é puro)
   const marcaDeTempo = () => ({ eventoId: novoId("e"), agora: new Date().toISOString() });
@@ -140,6 +142,7 @@ export function useAcoesConversa() {
         icone: "resolver",
         acao: () => alternarResolvida(conversa),
       },
+      { id: "etiquetas", rotulo: "Etiquetas…", icone: "etiqueta", acao: () => setEtiquetandoId(conversa.id) },
       { divisoria: true },
       {
         id: "arquivar",
@@ -161,9 +164,13 @@ export function useAcoesConversa() {
 
   const conversaExcluindo = estado.conversas.find((c) => c.id === excluindoId);
   const conversaTransferindo = estado.conversas.find((c) => c.id === transferindoId);
+  const conversaEtiquetando = estado.conversas.find((c) => c.id === etiquetandoId);
 
+  // Só uma janela por vez: a primeira que estiver "pedida" aparece
   let dialogo = null;
-  if (conversaTransferindo) {
+  if (conversaEtiquetando) {
+    dialogo = <DialogoEtiquetas conversa={conversaEtiquetando} aoFechar={() => setEtiquetandoId(null)} />;
+  } else if (conversaTransferindo) {
     dialogo = (
       <DialogoTransferir
         conversa={conversaTransferindo}

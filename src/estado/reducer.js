@@ -16,7 +16,7 @@
 import { MARCA_PADRAO, ATENDENTE_PADRAO, LIMITE_FIXADAS } from "../configuracao.js";
 import { buscarPorId, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
 import { podeApagarMensagem, podeEditarMensagem } from "../utilidades/permissoes.js";
-import { formatarDuracao } from "../utilidades/texto.js";
+import { formatarDuracao, normalizar } from "../utilidades/texto.js";
 
 export const estadoInicial = {
   carregando: true,
@@ -115,6 +115,10 @@ export function reducer(estado, acao) {
   switch (acao.tipo) {
     case "dadosCarregados":
       return { ...estado, ...acao.dados, carregando: false };
+
+    // Volta tudo ao exemplo: fecha a conversa e esquece os rascunhos
+    case "dadosRestaurados":
+      return { ...estado, ...acao.dados, conversaAbertaId: null, painelDadosAberto: false };
 
     case "erroAoCarregar":
       return { ...estado, carregando: false, erro: acao.mensagem };
@@ -371,6 +375,40 @@ export function reducer(estado, acao) {
           apagadaPor: estado.atendenteLogadoId,
           apagadaEm: acao.agora,
         })),
+      };
+    }
+
+    /* ---------- Etiquetas ---------- */
+
+    // Marca ou desmarca uma etiqueta na conversa: { conversaId, etiquetaId }
+    case "alternarEtiqueta":
+      return {
+        ...estado,
+        conversas: mudarConversa(estado.conversas, acao.conversaId, (c) => {
+          const atuais = c.etiquetas || [];
+          return {
+            ...c,
+            etiquetas: atuais.includes(acao.etiquetaId)
+              ? atuais.filter((id) => id !== acao.etiquetaId) // tira
+              : [...atuais, acao.etiquetaId], // põe
+          };
+        }),
+      };
+
+    /* Renomear uma etiqueta personalizável: { id, nome }
+       Só as "editavel: true" mudam de nome, e nunca para um nome vazio ou
+       repetido. A janela também confere (para explicar o erro), mas a
+       regra vale aqui de qualquer jeito */
+    case "renomearEtiqueta": {
+      const nome = acao.nome.trim();
+      const etiqueta = buscarPorId(estado.etiquetas, acao.id);
+      const repetida = estado.etiquetas.some((e) => e.id !== acao.id && normalizar(e.nome) === normalizar(nome));
+      if (!etiqueta?.editavel || !nome || repetida) return estado;
+
+      // Todas as conversas com essa etiqueta mudam juntas: elas guardam só o ID
+      return {
+        ...estado,
+        etiquetas: estado.etiquetas.map((e) => (e.id === acao.id ? { ...e, nome } : e)),
       };
     }
 
