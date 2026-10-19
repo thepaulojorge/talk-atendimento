@@ -1,4 +1,5 @@
 import { useEstado } from "../estado/useEstado.js";
+import { useMenuDeContexto } from "../hooks/useMenuDeContexto.js";
 import { buscarPorId, nomeDoAutor, resumoDaMensagem } from "../utilidades/conversas.js";
 import { formatarHoraMensagem } from "../utilidades/datas.js";
 import { podeVerAuditoria } from "../utilidades/permissoes.js";
@@ -10,11 +11,26 @@ import BalaoAudio from "./BalaoAudio.jsx";
    Props:
    - msg, conversa: os dados
    - destacada: true quando alguém clicou numa citação desta mensagem
-   - aoResponder(id), aoIrPara(id): o que fazer nos cliques (quem decide é o pai) */
-export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPara }) {
+   - selecionada: true enquanto o menu desta mensagem está aberto
+   - aoResponder(id), aoIrPara(id), aoAbrirMenu(id, posicao):
+     o que fazer em cada gesto (quem decide é o pai) */
+export default function Mensagem({ msg, conversa, destacada, selecionada, aoResponder, aoIrPara, aoAbrirMenu }) {
   const { estado } = useEstado();
   const supervisao = podeVerAuditoria(estado);
-  const classeBase = `mensagem mensagem--${msg.direcao}${destacada ? " mensagem--destaque" : ""}`;
+
+  /* Botão direito ou dedo pressionado: os eventos vêm prontos do hook.
+     Hooks sempre no TOPO do componente, antes de qualquer "return":
+     o React conta com eles sendo chamados sempre na mesma ordem */
+  const eventosMenu = useMenuDeContexto((posicao) => aoAbrirMenu(msg.id, posicao));
+
+  const classeBase = [
+    "mensagem",
+    `mensagem--${msg.direcao}`,
+    destacada && "mensagem--destaque",
+    selecionada && "mensagem--selecionada",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   /* ---------- Apagada (soft delete): só o aviso de quem apagou ---------- */
   if (msg.apagada) {
@@ -25,7 +41,7 @@ export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPa
     const conteudoOriginal = msg.tipo === "audio" ? `🎤 Áudio de ${formatarDuracao(msg.duracao)}` : msg.texto;
 
     return (
-      <div className={`${classeBase} mensagem--apagada${msg.tipo === "nota" ? " mensagem--nota" : ""}`} data-id={msg.id}>
+      <div className={`${classeBase} mensagem--apagada${msg.tipo === "nota" ? " mensagem--nota" : ""}`} data-id={msg.id} {...eventosMenu}>
         <div className="mensagem__texto">🚫 {quem}</div>
         {/* Só supervisão e diretoria veem o que foi apagado */}
         {supervisao && <div className="mensagem__original">{conteudoOriginal}</div>}
@@ -37,7 +53,7 @@ export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPa
   /* ---------- Nota interna: amarela, sem ↩ e sem ✓✓ ---------- */
   if (msg.tipo === "nota") {
     return (
-      <div className={`${classeBase} mensagem--nota`} data-id={msg.id}>
+      <div className={`${classeBase} mensagem--nota`} data-id={msg.id} {...eventosMenu}>
         <div className="mensagem__autor">📝 Nota interna · {nomeDoAutor(msg, conversa, estado)}</div>
         <div className="mensagem__texto">{msg.texto}</div>
         <Rodape msg={msg} supervisao={supervisao} />
@@ -54,7 +70,8 @@ export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPa
   const original = msg.respostaA ? conversa.mensagens.find((m) => m.id === msg.respostaA) : null;
 
   return (
-    <div className={classeBase} data-id={msg.id}>
+    // {...eventosMenu} "espalha" os eventos do hook: onContextMenu, onPointerDown...
+    <div className={classeBase} data-id={msg.id} {...eventosMenu}>
       <button
         type="button"
         className="mensagem__responder"
@@ -65,6 +82,12 @@ export default function Mensagem({ msg, conversa, destacada, aoResponder, aoIrPa
       </button>
 
       {autor && <div className="mensagem__autor">{autor}</div>}
+
+      {msg.encaminhada && (
+        <div className="mensagem__encaminhada">
+          <Icone nome="encaminhar" /> Encaminhada
+        </div>
+      )}
 
       {original && (
         <Citacao autor={nomeDoAutor(original, conversa, estado)} texto={resumoDaMensagem(original)} aoClicar={() => aoIrPara(original.id)} />

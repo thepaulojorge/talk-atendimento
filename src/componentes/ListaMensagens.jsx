@@ -3,7 +3,7 @@ import { formatarDia } from "../utilidades/datas.js";
 import Mensagem from "./Mensagem.jsx";
 
 /* Todas as mensagens da conversa, com o separador quando o dia muda */
-export default function ListaMensagens({ conversa, destacadaId, aoResponder, aoIrPara }) {
+export default function ListaMensagens({ conversa, destacadaId, menuMsgId, aoResponder, aoIrPara, aoAbrirMenu, aoRolar }) {
   /* useRef: uma "caixinha" que guarda uma referência ao elemento de verdade
      na página (o <div> das mensagens). Precisamos dele para mexer na rolagem,
      algo que o JSX sozinho não faz */
@@ -60,15 +60,18 @@ export default function ListaMensagens({ conversa, destacadaId, aoResponder, aoI
           msg={msg}
           conversa={conversa}
           destacada={msg.id === destacadaId}
+          selecionada={msg.id === menuMsgId}
           aoResponder={aoResponder}
           aoIrPara={aoIrPara}
+          aoAbrirMenu={aoAbrirMenu}
         />
       );
     }
   });
 
   return (
-    <div className="chat__mensagens" ref={caixa} aria-live="polite">
+    // Rolou a conversa: o menu aberto fecha (ele ficaria "boiando" no lugar errado)
+    <div className="chat__mensagens" ref={caixa} aria-live="polite" onScroll={aoRolar}>
       {itens}
     </div>
   );

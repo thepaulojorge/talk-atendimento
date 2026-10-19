@@ -11,6 +11,8 @@ export const ICONES = {
   nota: '<path d="M5 3.5h14a1.5 1.5 0 0 1 1.5 1.5v9.5l-6 6H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5z"/><path d="M14.5 20.5V16a1.5 1.5 0 0 1 1.5-1.5h4.5M7.5 8.5h9M7.5 12h5"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   enviar: '<path d="M21 3 10 14"/><path d="M21 3 14.5 21 10 14 3 9.5z"/>',
+  // O "responder" espelhado: a seta vai para a frente
+  encaminhar: '<path d="M14.5 14.5l5-5-5-5"/><path d="M19.5 9.5h-10a5 5 0 0 0-5 5v5"/>',
   responder: '<path d="M9.5 14.5 4.5 9.5l5-5"/><path d="M4.5 9.5h10a5 5 0 0 1 5 5v5"/>',
   tocar: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   pausar: '<rect x="7" y="5.5" width="3.2" height="13" rx="1" fill="currentColor"/><rect x="13.8" y="5.5" width="3.2" height="13" rx="1" fill="currentColor"/>',

@@ -16,7 +16,10 @@ const LIMITE_AUDIO_SEGUNDOS = 5 * 60; // 5 minutos: depois disso, envia sozinho
    - respostas rápidas com "/"
    - barra "Respondendo a..." quando há citação
    - gravação de áudio */
-export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }) {
+/* edicao (ou null): { msgId, texto, aoMudar, aoSalvar, aoCancelar }
+   Editando, o campo mostra o texto da EDIÇÃO; o rascunho continua guardado
+   em "rascunhos" sem ser tocado, e volta sozinho quando a edição termina */
+export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, edicao }) {
   const { estado, despachar } = useEstado();
   const estreita = useTelaEstreita();
   const campo = useRef(null);
@@ -24,7 +27,8 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
 
   /* "Componente controlado": o valor do <input> vem do ESTADO, e cada letra
      digitada atualiza o estado. O React é a única "fonte da verdade" */
-  const texto = estado.rascunhos[conversa.id] ?? "";
+  const texto = edicao ? edicao.texto : (estado.rascunhos[conversa.id] ?? "");
+  const editandoId = edicao?.msgId;
 
   // Estado LOCAL: só este componente precisa saber disso
   const [sugestaoAtiva, setSugestaoAtiva] = useState(0);
@@ -47,8 +51,17 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
     if (respondendoA) campo.current?.focus();
   }, [respondendoA]);
 
+  // Começou a editar: foco no campo, com o cursor no FIM do texto
+  useEffect(() => {
+    const el = campo.current;
+    if (!editandoId || !el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [editandoId]);
+
   function mudarTexto(novo) {
-    despachar({ tipo: "definirRascunho", conversaId: conversa.id, texto: novo });
+    if (edicao) edicao.aoMudar(novo);
+    else despachar({ tipo: "definirRascunho", conversaId: conversa.id, texto: novo });
     setSugestaoAtiva(0);
     setSugestoesFechadas(false);
   }
@@ -83,7 +96,9 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
   function enviar(evento) {
     evento.preventDefault(); // sem isso o form recarregaria a página
     const conteudo = texto.trim();
-    if (conteudo) despacharEnvio({ tipo: "texto", texto: conteudo });
+    if (!conteudo) return;
+    if (edicao) edicao.aoSalvar(conteudo); // editando: Enter SALVA em vez de enviar
+    else despacharEnvio({ tipo: "texto", texto: conteudo });
   }
 
   /* ---------- Áudio ---------- */
@@ -143,6 +158,9 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
       if (procurandoAtalho) {
         evento.stopPropagation();
         setSugestoesFechadas(true);
+      } else if (edicao) {
+        evento.stopPropagation();
+        edicao.aoCancelar();
       } else if (respondendoA) {
         evento.stopPropagation();
         aoCancelarCitacao();
@@ -155,6 +173,15 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
 
   return (
     <>
+      {edicao && (
+        <div className="citacao-envio edicao-envio">
+          <Citacao autor="✏️ Editando mensagem" texto={conversa.mensagens.find((m) => m.id === edicao.msgId)?.texto} />
+          <button type="button" className="botao-cancelar-citacao" aria-label="Cancelar edição" onClick={edicao.aoCancelar}>
+            <Icone nome="fechar" />
+          </button>
+        </div>
+      )}
+
       {respondendoA && (
         <div className="citacao-envio">
           <Citacao
@@ -224,8 +251,14 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao }
           />
 
           {/* Campo vazio: microfone. Com texto: enviar */}
-          {temTexto ? (
-            <button type="submit" id="botao-enviar" aria-label="Enviar mensagem">
+          {/* Editando: sempre o botão de salvar (áudio não entra numa edição) */}
+          {temTexto || edicao ? (
+            <button
+              type="submit"
+              id="botao-enviar"
+              aria-label={edicao ? "Salvar edição" : "Enviar mensagem"}
+              disabled={!temTexto}
+            >
               <Icone nome="enviar" />
             </button>
           ) : (

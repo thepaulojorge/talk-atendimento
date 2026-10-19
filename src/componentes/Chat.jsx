@@ -1,10 +1,23 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
-import { buscarPorId, contarTotalNaoLidas, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
+import { avisar } from "../estado/avisos.js";
+import { usePlayer } from "../audio/usePlayer.js";
+import { novoId } from "../utilidades/ids.js";
+import { podeApagarMensagem, podeEditarMensagem, podeEncaminhar } from "../utilidades/permissoes.js";
+import {
+  buscarPorId,
+  contarTotalNaoLidas,
+  estaResolvida,
+  nomeDaConversa,
+  resumoDaMensagem,
+} from "../utilidades/conversas.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
 import ListaMensagens from "./ListaMensagens.jsx";
 import CampoEnvio from "./CampoEnvio.jsx";
+import MenuFlutuante from "./MenuFlutuante.jsx";
+import DialogoConfirmacao from "./DialogoConfirmacao.jsx";
+import DialogoEncaminhar from "./DialogoEncaminhar.jsx";
 
 /* Coluna do meio: a tela vazia ou a conversa aberta.
    Antes: esconder e mostrar seções com "hidden".
@@ -62,7 +75,115 @@ function ChatAberto({ conversa }) {
   const [respondendoAId, setRespondendoAId] = useState(null);
   const [destacadaId, setDestacadaId] = useState(null);
 
-  const respondendoA = respondendoAId ? conversa.mensagens.find((m) => m.id === respondendoAId) : null;
+  /* Menu e ações das mensagens. Guardamos só os IDs: a mensagem em si
+     é buscada na hora, sempre a versão mais nova do estado */
+  const [menu, setMenu] = useState(null); // { msgId, x, y, toque }
+  const [edicao, setEdicao] = useState(null); // { msgId, texto }
+  const [apagandoId, setApagandoId] = useState(null);
+  const [encaminhandoId, setEncaminhandoId] = useState(null);
+  const player = usePlayer();
+
+  const acharMsg = (id) => (id ? conversa.mensagens.find((m) => m.id === id) : null);
+  const respondendoA = acharMsg(respondendoAId);
+
+  /* useCallback: o MenuFlutuante usa "aoFechar" dentro de um useEffect.
+     Sem isso, cada renderização criaria uma função nova e o efeito
+     removeria e recolocaria os ouvintes à toa */
+  const fecharMenu = useCallback(() => setMenu(null), []);
+
+  // Mesma ideia do menu: a função só existe uma vez
+  const abrirMenu = useCallback((msgId, posicao) => setMenu({ msgId, ...posicao }), []);
+
+  /* ---------- As ações ---------- */
+  function responder(msg) {
+    setEdicao(null); // responder e editar ao mesmo tempo não faz sentido
+    setRespondendoAId(msg.id);
+  }
+
+  function copiar(msg) {
+    // A área de transferência só funciona em localhost ou HTTPS
+    if (!navigator.clipboard) return avisar(despachar, "Não foi possível copiar");
+    navigator.clipboard
+      .writeText(msg.texto)
+      .then(() => avisar(despachar, "Texto copiado"))
+      .catch(() => avisar(despachar, "Não foi possível copiar"));
+  }
+
+  function comecarEdicao(msg) {
+    setRespondendoAId(null);
+    setEdicao({ msgId: msg.id, texto: msg.texto });
+  }
+
+  function salvarEdicao(texto) {
+    despachar({
+      tipo: "editarMensagem",
+      conversaId: conversa.id,
+      mensagemId: edicao.msgId,
+      texto,
+      agora: new Date().toISOString(),
+      auditoriaId: novoId("aud"),
+    });
+    setEdicao(null);
+    avisar(despachar, "Mensagem editada");
+  }
+
+  function apagar() {
+    const id = apagandoId;
+    despachar({
+      tipo: "apagarMensagem",
+      conversaId: conversa.id,
+      mensagemId: id,
+      agora: new Date().toISOString(),
+      auditoriaId: novoId("aud"),
+    });
+    // Limpa o que dependia da mensagem: edição, citação e o áudio tocando
+    if (edicao?.msgId === id) setEdicao(null);
+    if (respondendoAId === id) setRespondendoAId(null);
+    if (player.tocandoId === id) player.parar();
+    avisar(despachar, "Mensagem apagada");
+  }
+
+  function encaminhar(destinoId) {
+    const msg = acharMsg(encaminhandoId);
+    if (!msg) return;
+    // Só o conteúdo viaja: autor, horário e citação são da conversa nova
+    const conteudo =
+      msg.tipo === "audio"
+        ? { tipo: "audio", audioUrl: msg.audioUrl, duracao: msg.duracao, encaminhada: true }
+        : { tipo: "texto", texto: msg.texto, encaminhada: true };
+
+    despachar({
+      tipo: "enviarMensagem",
+      conversaId: destinoId,
+      id: novoId("m"),
+      agora: new Date().toISOString(),
+      conteudo,
+      limparRascunho: false, // o que estava escrito lá continua lá
+    });
+    const destino = buscarPorId(estado.conversas, destinoId);
+    avisar(despachar, `Encaminhada para ${nomeDaConversa(destino, estado.contatos)}`);
+  }
+
+  /* As opções do menu, conforme a mensagem e quem está logado.
+     Cada opção que não se aplica simplesmente não entra na lista */
+  function opcoesDe(msg) {
+    const temTexto = (msg.tipo === "texto" || msg.tipo === "nota") && !msg.apagada;
+    return [
+      !msg.apagada && msg.tipo !== "nota" && { id: "responder", rotulo: "Responder", icone: "responder", acao: () => responder(msg) },
+      temTexto && { id: "copiar", rotulo: "Copiar texto", icone: "copiar", acao: () => copiar(msg) },
+      podeEncaminhar(msg) && { id: "encaminhar", rotulo: "Encaminhar", icone: "encaminhar", acao: () => setEncaminhandoId(msg.id) },
+      podeEditarMensagem(estado, msg) && { id: "editar", rotulo: "Editar", icone: "lapis", acao: () => comecarEdicao(msg) },
+      { divisoria: true },
+      podeApagarMensagem(estado, msg) && { id: "apagar", rotulo: "Apagar", icone: "lixeira", perigo: true, acao: () => setApagandoId(msg.id) },
+    ].filter(Boolean);
+  }
+
+  const msgDoMenu = acharMsg(menu?.msgId);
+  // Só divisórias? Então não há nada a oferecer (ex.: mensagem apagada de outra pessoa)
+  const opcoesDoMenu = msgDoMenu ? opcoesDe(msgDoMenu) : [];
+  const menuAberto = opcoesDoMenu.some((opcao) => !opcao.divisoria);
+  const msgApagando = acharMsg(apagandoId);
+  const msgEncaminhando = acharMsg(encaminhandoId);
 
   // O destaque (a mensagem "pisca") some depois da animação
   useEffect(() => {
@@ -77,6 +198,8 @@ function ChatAberto({ conversa }) {
   useEffect(() => {
     function aoApertarTecla(evento) {
       if (evento.key !== "Escape") return;
+      // Uma janela aberta (apagar, encaminhar) usa o Esc para fechar a SI MESMA
+      if (document.querySelector("dialog[open]")) return;
       const ativo = document.activeElement;
       const digitandoForaDoChat = ativo?.matches("input, textarea, select") && !ativo.closest(".chat");
       if (!digitandoForaDoChat) despachar({ tipo: "fecharConversa" });
@@ -127,15 +250,57 @@ function ChatAberto({ conversa }) {
       <ListaMensagens
         conversa={conversa}
         destacadaId={destacadaId}
-        aoResponder={setRespondendoAId}
+        menuMsgId={menuAberto ? menu.msgId : null}
+        aoResponder={(id) => responder(acharMsg(id))}
         aoIrPara={setDestacadaId}
+        aoAbrirMenu={abrirMenu}
+        aoRolar={menu ? fecharMenu : undefined}
       />
 
       <CampoEnvio
         conversa={conversa}
         respondendoA={respondendoA}
         aoCancelarCitacao={() => setRespondendoAId(null)}
+        edicao={
+          edicao && {
+            ...edicao,
+            aoMudar: (texto) => setEdicao({ ...edicao, texto }),
+            aoSalvar: salvarEdicao,
+            aoCancelar: () => setEdicao(null),
+          }
+        }
       />
+
+      {menuAberto && (
+        <MenuFlutuante
+          opcoes={opcoesDoMenu}
+          x={menu.x}
+          y={menu.y}
+          folha={menu.toque}
+          previa={resumoDaMensagem(msgDoMenu)}
+          aoFechar={fecharMenu}
+        />
+      )}
+
+      {/* As janelas só existem enquanto estão abertas */}
+      {msgApagando && (
+        <DialogoConfirmacao
+          titulo="Apagar mensagem?"
+          texto={
+            msgApagando.tipo === "nota"
+              ? "A nota será apagada para toda a equipe."
+              : "A mensagem será apagada aqui para toda a equipe. O cliente pode já ter visto o conteúdo."
+          }
+          rotulo="Apagar"
+          perigo
+          aoConfirmar={apagar}
+          aoFechar={() => setApagandoId(null)}
+        />
+      )}
+
+      {msgEncaminhando && (
+        <DialogoEncaminhar msg={msgEncaminhando} aoEscolher={encaminhar} aoFechar={() => setEncaminhandoId(null)} />
+      )}
     </section>
   );
 }
