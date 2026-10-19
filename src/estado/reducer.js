@@ -89,6 +89,21 @@ function quemEscreveu(msg, conversa, estado) {
   return nomeDaConversa(conversa, estado.contatos);
 }
 
+/* Um evento no histórico da conversa: "Carla assumiu a conversa".
+   Fica no meio das mensagens, para toda a equipe ver quem fez o quê e quando */
+function evento(id, texto, agora) {
+  return { id, tipo: "sistema", texto, horario: agora, direcao: "interna", lida: true, autor: null };
+}
+
+function nomeDoLogado(estado) {
+  return buscarPorId(estado.atendentes, estado.atendenteLogadoId)?.nome || "Atendente";
+}
+
+// Acrescenta mensagens (ou eventos) no fim de uma conversa
+function acrescentar(conversa, ...novas) {
+  return { ...conversa, mensagens: [...conversa.mensagens, ...novas] };
+}
+
 // Acha conversa + mensagem de uma vez (ou devolve null)
 function acharMensagem(estado, conversaId, mensagemId) {
   const conversa = buscarPorId(estado.conversas, conversaId);
@@ -258,50 +273,50 @@ export function reducer(estado, acao) {
        - conversa resolvida: reabre
        Cada regra deixa um evento no histórico ("Paulo assumiu a conversa") */
     case "enviarMensagem": {
-      const nomeLogado = buscarPorId(estado.atendentes, estado.atendenteLogadoId)?.nome || "Atendente";
+      const nomeLogado = nomeDoLogado(estado);
+      // Nota interna não conta como atender: não assume nem reabre a conversa
+      const ehNota = acao.conteudo.tipo === "nota";
 
       const conversas = mudarConversa(estado.conversas, acao.conversaId, (conversa) => {
         const eventos = [];
         let { atendenteId, status } = conversa;
 
-        if (!atendenteId) {
+        if (!ehNota && !atendenteId) {
           atendenteId = estado.atendenteLogadoId;
-          eventos.push({ texto: `${nomeLogado} assumiu a conversa` });
+          eventos.push(`${nomeLogado} assumiu a conversa`);
         }
-        if (estaResolvida(conversa)) {
+        if (!ehNota && estaResolvida(conversa)) {
           status = "aberta";
-          eventos.push({ texto: `${nomeLogado} reabriu a conversa` });
+          eventos.push(`${nomeLogado} reabriu a conversa`);
         }
 
-        const mensagensDeEvento = eventos.map((evento, i) => ({
-          id: `${acao.id}-e${i}`,
-          tipo: "sistema",
-          texto: evento.texto,
-          horario: acao.agora,
-          direcao: "interna",
-          lida: true,
-          autor: null,
-        }));
+        /* acao.conteudo traz o que muda entre os tipos:
+           { tipo: "texto", texto }, { tipo: "audio", audioUrl, duracao }
+           ou { tipo: "nota", texto } */
+        const novaMensagem = ehNota
+          ? {
+              id: acao.id,
+              ...acao.conteudo,
+              horario: acao.agora,
+              direcao: "interna", // nunca vai para o cliente
+              lida: true,
+              autor: estado.atendenteLogadoId,
+            }
+          : {
+              id: acao.id,
+              ...acao.conteudo,
+              horario: acao.agora,
+              direcao: "enviada",
+              lida: false, // ✓✓ cinza: o cliente ainda não leu
+              autor: estado.atendenteLogadoId,
+              respostaA: acao.respostaA || null,
+            };
 
-        /* acao.conteudo traz o que muda entre texto e áudio:
-           { tipo: "texto", texto } ou { tipo: "audio", audioUrl, duracao }.
-           As regras acima (assumir, reabrir) valem igual para os dois */
-        const novaMensagem = {
-          id: acao.id,
-          ...acao.conteudo,
-          horario: acao.agora,
-          direcao: "enviada",
-          lida: false, // ✓✓ cinza: o cliente ainda não leu
-          autor: estado.atendenteLogadoId,
-          respostaA: acao.respostaA || null,
-        };
-
-        return {
-          ...conversa,
-          atendenteId,
-          status,
-          mensagens: [...conversa.mensagens, ...mensagensDeEvento, novaMensagem],
-        };
+        return acrescentar(
+          { ...conversa, atendenteId, status },
+          ...eventos.map((texto, i) => evento(`${acao.id}-e${i}`, texto, acao.agora)),
+          novaMensagem
+        );
       });
 
       // Encaminhar envia para OUTRA conversa: o rascunho de lá fica intacto
@@ -358,6 +373,95 @@ export function reducer(estado, acao) {
         })),
       };
     }
+
+    /* ---------- Equipe ---------- */
+
+    // { id, eventoId, agora }
+    case "assumirConversa": {
+      const conversa = buscarPorId(estado.conversas, acao.id);
+      if (!conversa || conversa.atendenteId === estado.atendenteLogadoId) return estado;
+      return {
+        ...estado,
+        conversas: mudarConversa(estado.conversas, acao.id, (c) =>
+          acrescentar(
+            { ...c, atendenteId: estado.atendenteLogadoId },
+            evento(acao.eventoId, `${nomeDoLogado(estado)} assumiu a conversa`, acao.agora)
+          )
+        ),
+      };
+    }
+
+    /* { id, destinoId, eventoId, agora }
+       destinoId = id de um atendente, ou null para devolver à fila */
+    case "transferirConversa": {
+      const conversa = buscarPorId(estado.conversas, acao.id);
+      if (!conversa || conversa.atendenteId === acao.destinoId) return estado;
+      const destino = buscarPorId(estado.atendentes, acao.destinoId);
+      const texto = destino
+        ? `${nomeDoLogado(estado)} transferiu a conversa para ${destino.nome}`
+        : `${nomeDoLogado(estado)} devolveu a conversa para a fila`;
+      return {
+        ...estado,
+        conversas: mudarConversa(estado.conversas, acao.id, (c) =>
+          acrescentar({ ...c, atendenteId: acao.destinoId }, evento(acao.eventoId, texto, acao.agora))
+        ),
+      };
+    }
+
+    // { id, eventoId, agora }
+    case "alternarResolvida": {
+      const conversa = buscarPorId(estado.conversas, acao.id);
+      if (!conversa) return estado;
+      const resolvendo = !estaResolvida(conversa);
+      const texto = resolvendo
+        ? `${nomeDoLogado(estado)} marcou a conversa como resolvida`
+        : `${nomeDoLogado(estado)} reabriu a conversa`;
+      return {
+        ...estado,
+        conversas: mudarConversa(estado.conversas, acao.id, (c) =>
+          acrescentar({ ...c, status: resolvendo ? "resolvida" : "aberta" }, evento(acao.eventoId, texto, acao.agora))
+        ),
+      };
+    }
+
+    /* Mensagem do cliente chegando: { conversaId, id, agora, texto, autor }
+       ⚠️ Por enquanto só a simulação usa. Com o backend, quem despacha
+       esta ação é o aviso do WhatsApp (pelo Socket.io) */
+    case "receberMensagem": {
+      const conversa = buscarPorId(estado.conversas, acao.conversaId);
+      if (!conversa) return estado;
+      const aberta = conversa.id === estado.conversaAbertaId;
+
+      const novas = [];
+      // Cliente escreveu numa conversa resolvida: ela reabre sozinha
+      if (estaResolvida(conversa)) {
+        novas.push(evento(`${acao.id}-e0`, "Conversa reaberta: o cliente enviou uma nova mensagem", acao.agora));
+      }
+      novas.push({
+        id: acao.id,
+        tipo: "texto",
+        texto: acao.texto,
+        horario: acao.agora,
+        direcao: "recebida",
+        lida: aberta, // com a conversa aberta na tela, você já está lendo
+        autor: acao.autor || null,
+      });
+
+      return {
+        ...estado,
+        conversas: mudarConversa(estado.conversas, conversa.id, (c) =>
+          // Arquivada continua arquivada (como no WhatsApp); o atalho mostra as não lidas
+          acrescentar({ ...c, status: "aberta" }, ...novas)
+        ),
+        // Aviso só se você NÃO estiver olhando para a conversa
+        aviso: aberta ? estado.aviso : { id: acao.id, texto: `Nova mensagem de ${nomeDaConversa(conversa, estado.contatos)}` },
+      };
+    }
+
+    /* ⚠️ SIMULAÇÃO de login: troca quem está usando o sistema.
+       Na parte 4c, isso vira a tela de login de verdade */
+    case "trocarAtendente":
+      return { ...estado, atendenteLogadoId: acao.id };
 
     // ✓✓ fica azul (por enquanto, quem avisa é uma simulação)
     case "mensagemLida":

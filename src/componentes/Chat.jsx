@@ -82,6 +82,8 @@ function ChatAberto({ conversa }) {
   const [edicao, setEdicao] = useState(null); // { msgId, texto }
   const [apagandoId, setApagandoId] = useState(null);
   const [encaminhandoId, setEncaminhandoId] = useState(null);
+  // Modo nota: o campo escreve para a EQUIPE, não para o cliente
+  const [modoNota, setModoNota] = useState(false);
   const player = usePlayer();
 
   /* Menu ⋮ do topo. A ref do botão serve para duas coisas:
@@ -113,6 +115,7 @@ function ChatAberto({ conversa }) {
   /* ---------- As ações ---------- */
   function responder(msg) {
     setEdicao(null); // responder e editar ao mesmo tempo não faz sentido
+    setModoNota(false); // a resposta vai para o cliente, então sai do modo nota
     setRespondendoAId(msg.id);
   }
 
@@ -123,6 +126,12 @@ function ChatAberto({ conversa }) {
       .writeText(msg.texto)
       .then(() => avisar(despachar, "Texto copiado"))
       .catch(() => avisar(despachar, "Não foi possível copiar"));
+  }
+
+  function alternarNota() {
+    // Nota não cita mensagem: ao ligar o modo nota, a citação sai
+    if (!modoNota) setRespondendoAId(null);
+    setModoNota(!modoNota);
   }
 
   function comecarEdicao(msg) {
@@ -287,8 +296,12 @@ function ChatAberto({ conversa }) {
         aoRolar={menu ? fecharMenu : undefined}
       />
 
+      <FaixaAtendimento conversa={conversa} acoes={acoesConversa.acoes} />
+
       <CampoEnvio
         conversa={conversa}
+        modoNota={modoNota}
+        aoAlternarNota={alternarNota}
         respondendoA={respondendoA}
         aoCancelarCitacao={() => setRespondendoAId(null)}
         edicao={
@@ -305,6 +318,7 @@ function ChatAberto({ conversa }) {
         <MenuFlutuante
           opcoes={acoesConversa.opcoesDe(conversa, {
             aoVerDados: () => despachar({ tipo: "abrirDados" }),
+            comSimulacao: true,
           })}
           x={menuTopo.x}
           y={menuTopo.y}
@@ -345,5 +359,41 @@ function ChatAberto({ conversa }) {
         <DialogoEncaminhar msg={msgEncaminhando} aoEscolher={encaminhar} aoFechar={() => setEncaminhandoId(null)} />
       )}
     </section>
+  );
+}
+
+/* Faixa acima do campo de envio. Mostra quem está atendendo:
+   - resolvida: "✓ Atendimento resolvido." + Reabrir
+   - sem atendente: "Ninguém está atendendo" + Assumir
+   - de outra pessoa: "Carla está atendendo" + Assumir
+   - sua: a faixa não aparece (return null) */
+function FaixaAtendimento({ conversa, acoes }) {
+  const { estado } = useEstado();
+  const dono = conversa.atendenteId;
+
+  if (estaResolvida(conversa)) {
+    return (
+      <div className="faixa faixa--resolvida">
+        <span>✓ Atendimento resolvido.</span>
+        <button type="button" id="botao-faixa-assumir" onClick={() => acoes.alternarResolvida(conversa)}>
+          Reabrir
+        </button>
+      </div>
+    );
+  }
+
+  if (dono === estado.atendenteLogadoId) return null;
+
+  return (
+    <div className={dono ? "faixa faixa--outro" : "faixa"}>
+      <span>
+        {dono
+          ? `${buscarPorId(estado.atendentes, dono)?.nome || "Outro atendente"} está atendendo esta conversa.`
+          : "Ninguém está atendendo esta conversa."}
+      </span>
+      <button type="button" id="botao-faixa-assumir" onClick={() => acoes.assumir(conversa)}>
+        Assumir
+      </button>
+    </div>
   );
 }

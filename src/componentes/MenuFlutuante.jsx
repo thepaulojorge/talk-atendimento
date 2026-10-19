@@ -6,14 +6,15 @@ import Icone from "./Icone.jsx";
    (Na etapa 3b, o clique direito nas conversas vai usar o mesmo.)
 
    Props:
-   - opcoes: [{ id, rotulo, icone, perigo?, acao }] ou { divisoria: true }
+   - opcoes: [{ id, rotulo, icone?, perigo?, teste?, acao }] ou { divisoria: true }
    - x, y: onde abrir (posição do mouse)
    - folha: true = "folha" que sobe do rodapé (celular, aberto pelo toque)
    - previa: texto curto mostrado no topo da folha (a mensagem escolhida)
+   - titulo: um rótulo pequeno no topo do menu ("Simular login como")
    - aoFechar: chamado ao clicar fora, apertar Esc ou escolher uma opção
    - ancora (opcional): ref do botão que abre o menu (o ⋮). Clicar nele não
      conta como "clicar fora": quem cuida desse clique é o próprio botão */
-export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, ancora, aoFechar }) {
+export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, titulo, ancora, aoFechar }) {
   const caixa = useRef(null); // o menu inteiro (na folha, inclui o fundo escuro)
   const lista = useRef(null);
   const tocouNoFundo = useRef(false);
@@ -80,13 +81,24 @@ export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, anc
           {previa}
         </li>
       )}
+      {titulo && (
+        <li role="none" className="menu-atendente__titulo">
+          {titulo}
+        </li>
+      )}
       {itens.map((opcao, i) =>
         opcao.divisoria ? (
           <li key={`div-${i}`} role="separator" className="menu__divisoria" />
         ) : (
           <li key={opcao.id} role="none">
-            <button type="button" role="menuitem" className={opcao.perigo ? "perigo" : undefined} onClick={() => escolher(opcao)}>
-              <Icone nome={opcao.icone} />
+            <button
+              type="button"
+              role="menuitem"
+              // perigo = vermelho (excluir) | teste = discreto (ferramentas de simulação)
+              className={opcao.perigo ? "perigo" : opcao.teste ? "menu__teste" : undefined}
+              onClick={() => escolher(opcao)}
+            >
+              {opcao.icone && <Icone nome={opcao.icone} />}
               <span className="menu__texto">{opcao.rotulo}</span>
             </button>
           </li>

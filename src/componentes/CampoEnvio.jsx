@@ -18,8 +18,9 @@ const LIMITE_AUDIO_SEGUNDOS = 5 * 60; // 5 minutos: depois disso, envia sozinho
    - gravação de áudio */
 /* edicao (ou null): { msgId, texto, aoMudar, aoSalvar, aoCancelar }
    Editando, o campo mostra o texto da EDIÇÃO; o rascunho continua guardado
-   em "rascunhos" sem ser tocado, e volta sozinho quando a edição termina */
-export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, edicao }) {
+   em "rascunhos" sem ser tocado, e volta sozinho quando a edição termina
+   modoNota + aoAlternarNota: o botão 📝 (o estado mora no ChatAberto) */
+export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, edicao, modoNota, aoAlternarNota }) {
   const { estado, despachar } = useEstado();
   const estreita = useTelaEstreita();
   const campo = useRef(null);
@@ -29,6 +30,11 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
      digitada atualiza o estado. O React é a única "fonte da verdade" */
   const texto = edicao ? edicao.texto : (estado.rascunhos[conversa.id] ?? "");
   const editandoId = edicao?.msgId;
+  const msgEditada = edicao ? conversa.mensagens.find((m) => m.id === edicao.msgId) : null;
+
+  /* O campo fica amarelo quando o texto é para a EQUIPE:
+     no modo nota, ou editando uma nota que já existe */
+  const pareceNota = edicao ? msgEditada?.tipo === "nota" : modoNota;
 
   // Estado LOCAL: só este componente precisa saber disso
   const [sugestaoAtiva, setSugestaoAtiva] = useState(0);
@@ -72,20 +78,25 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     campo.current?.focus();
   }
 
-  /* Envio comum para texto e áudio.
-     conteudo = { tipo: "texto", texto } ou { tipo: "audio", audioUrl, duracao } */
+  /* Envio comum para texto, áudio e nota.
+     conteudo = { tipo: "texto", texto }, { tipo: "audio", audioUrl, duracao }
+     ou { tipo: "nota", texto } */
   function despacharEnvio(conteudo) {
     // Id e horário nascem AQUI (o reducer precisa ser puro)
     const id = `m${Date.now()}`;
+    const ehNota = conteudo.tipo === "nota";
     despachar({
       tipo: "enviarMensagem",
       conversaId: conversa.id,
       id,
       agora: new Date().toISOString(),
       conteudo,
-      respostaA: respondendoA?.id,
+      respostaA: ehNota ? null : respondendoA?.id,
     });
     aoCancelarCitacao();
+
+    // Nota não vai para o cliente: ninguém "lê" do outro lado
+    if (ehNota) return;
 
     /* ⚠️ SIMULAÇÃO: finge que o cliente leu 3 segundos depois.
        Com o backend, quem avisa a leitura é o WhatsApp */
@@ -98,7 +109,7 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     const conteudo = texto.trim();
     if (!conteudo) return;
     if (edicao) edicao.aoSalvar(conteudo); // editando: Enter SALVA em vez de enviar
-    else despacharEnvio({ tipo: "texto", texto: conteudo });
+    else despacharEnvio({ tipo: modoNota ? "nota" : "texto", texto: conteudo });
   }
 
   /* ---------- Áudio ---------- */
@@ -171,6 +182,10 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
 
   const temTexto = texto.trim() !== "";
 
+  // Celular: textos curtos, senão o placeholder aparece cortado
+  let placeholder = estreita ? "Mensagem ou / atalho" : "Digite uma mensagem ou / para respostas rápidas";
+  if (pareceNota) placeholder = estreita ? "Nota interna" : "Nota interna: só a equipe vê";
+
   return (
     <>
       {edicao && (
@@ -232,7 +247,23 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
           </button>
         </div>
       ) : (
-        <form className="chat__envio" onSubmit={enviar}>
+        <form className={pareceNota ? "chat__envio chat__envio--nota" : "chat__envio"} onSubmit={enviar}>
+          {/* 📝 Alterna entre mensagem para o cliente e nota interna (só a equipe vê) */}
+          <button
+            type="button"
+            className="botao-nota"
+            aria-pressed={pareceNota}
+            aria-label="Escrever nota interna"
+            title="Nota interna: só a equipe vê"
+            onClick={() => {
+              // Editando? Não deixa transformar mensagem em nota (nem o contrário)
+              if (edicao) return avisar(despachar, "Termine ou cancele a edição primeiro");
+              aoAlternarNota();
+              campo.current?.focus();
+            }}
+          >
+            <Icone nome="nota" />
+          </button>
           <label htmlFor="campo-mensagem" className="visualmente-oculto">
             Digite uma mensagem
           </label>
@@ -241,7 +272,7 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
             id="campo-mensagem"
             type="text"
             autoComplete="off"
-            placeholder={estreita ? "Mensagem ou / atalho" : "Digite uma mensagem ou / para respostas rápidas"}
+            placeholder={placeholder}
             value={texto}
             onChange={(evento) => mudarTexto(evento.target.value)}
             onKeyDown={aoApertarTecla}
@@ -250,13 +281,13 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
             autoFocus={conversa.mensagens.length === 0}
           />
 
-          {/* Campo vazio: microfone. Com texto: enviar */}
-          {/* Editando: sempre o botão de salvar (áudio não entra numa edição) */}
-          {temTexto || edicao ? (
+          {/* Campo vazio: microfone. Com texto: enviar.
+              Editando ou no modo nota: sempre o botão (áudio não vira nota nem edição) */}
+          {temTexto || edicao || modoNota ? (
             <button
               type="submit"
               id="botao-enviar"
-              aria-label={edicao ? "Salvar edição" : "Enviar mensagem"}
+              aria-label={edicao ? "Salvar edição" : modoNota ? "Salvar nota interna" : "Enviar mensagem"}
               disabled={!temTexto}
             >
               <Icone nome="enviar" />
