@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
 import { usePlayer } from "../audio/usePlayer.js";
+import { useAcoesConversa } from "../hooks/useAcoesConversa.jsx";
 import { novoId } from "../utilidades/ids.js";
 import { podeApagarMensagem, podeEditarMensagem, podeEncaminhar } from "../utilidades/permissoes.js";
 import {
@@ -82,6 +83,21 @@ function ChatAberto({ conversa }) {
   const [apagandoId, setApagandoId] = useState(null);
   const [encaminhandoId, setEncaminhandoId] = useState(null);
   const player = usePlayer();
+
+  /* Menu ⋮ do topo. A ref do botão serve para duas coisas:
+     saber ONDE abrir o menu, e avisar o menu que clicar no botão
+     não é "clicar fora" (o botão abre e fecha sozinho) */
+  const botaoMenu = useRef(null);
+  const [menuTopo, setMenuTopo] = useState(null); // { x, y } ou null
+  const fecharMenuTopo = useCallback(() => setMenuTopo(null), []);
+  const acoesConversa = useAcoesConversa();
+
+  function alternarMenuTopo() {
+    if (menuTopo) return fecharMenuTopo();
+    const caixa = botaoMenu.current.getBoundingClientRect();
+    // x na direita do botão: o menu "encosta" na borda e fica dentro da tela
+    setMenuTopo({ x: caixa.right, y: caixa.bottom + 4 });
+  }
 
   const acharMsg = (id) => (id ? conversa.mensagens.find((m) => m.id === id) : null);
   const respondendoA = acharMsg(respondendoAId);
@@ -245,6 +261,20 @@ function ChatAberto({ conversa }) {
             {detalhe} · {responsavel}
           </p>
         </div>
+
+        <div className="menu">
+          <button
+            type="button"
+            ref={botaoMenu}
+            className="menu__botao"
+            aria-label="Mais opções"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(menuTopo)}
+            onClick={alternarMenuTopo}
+          >
+            <Icone nome="mais" />
+          </button>
+        </div>
       </header>
 
       <ListaMensagens
@@ -270,6 +300,19 @@ function ChatAberto({ conversa }) {
           }
         }
       />
+
+      {menuTopo && (
+        <MenuFlutuante
+          opcoes={acoesConversa.opcoesDe(conversa, {
+            aoVerDados: () => despachar({ tipo: "abrirDados" }),
+          })}
+          x={menuTopo.x}
+          y={menuTopo.y}
+          ancora={botaoMenu}
+          aoFechar={fecharMenuTopo}
+        />
+      )}
+      {acoesConversa.dialogo}
 
       {menuAberto && (
         <MenuFlutuante

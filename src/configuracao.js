@@ -9,3 +9,6 @@ export const MARCA_PADRAO = {
 
 // Quem está "logado" enquanto a tela de login não existe
 export const ATENDENTE_PADRAO = "at1";
+
+// Quantas conversas podem ficar fixadas no topo ao mesmo tempo
+export const LIMITE_FIXADAS = 3;

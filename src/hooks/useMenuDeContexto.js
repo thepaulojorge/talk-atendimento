@@ -65,6 +65,12 @@ export function useMenuDeContexto(abrir) {
         if (!abriuPeloToque.current && inicio.current) abrirPeloToque();
         return;
       }
+      // Tecla "Menu" do teclado (ou Shift+F10): não há mouse, o x e o y vêm 0.
+      // Então abrimos logo abaixo do próprio elemento
+      if (evento.clientX === 0 && evento.clientY === 0) {
+        const caixa = evento.currentTarget.getBoundingClientRect();
+        return abrir({ x: caixa.left + 40, y: caixa.bottom, toque: false });
+      }
       abrir({ x: evento.clientX, y: evento.clientY, toque: false });
     },
 

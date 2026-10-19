@@ -2420,3 +2420,21 @@ kbd {
 .dialogo-encaminhar .confirmacao__botoes {
   margin-top: 12px;
 }
+
+/* =========================================================
+   MENU DA CONVERSA (botão direito ou dedo pressionado na lista)
+   ========================================================= */
+/* A conversa com o menu aberto fica marcada, como a mensagem */
+.conversa--selecionada {
+  background: var(--fundo-hover);
+  box-shadow: inset 3px 0 0 var(--azul-lido);
+}
+
+/* No toque, segurar o dedo na conversa não seleciona o texto do nome */
+@media (hover: none) {
+  .conversa {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

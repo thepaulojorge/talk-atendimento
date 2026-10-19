@@ -13,7 +13,7 @@
    2. Ser PURO: com o mesmo estado e a mesma ação, devolver sempre o mesmo
       resultado. Por isso nada de Date.now() ou new Date() aqui dentro:
       ids e horários são criados ANTES, no componente, e vêm na ação. */
-import { MARCA_PADRAO, ATENDENTE_PADRAO } from "../configuracao.js";
+import { MARCA_PADRAO, ATENDENTE_PADRAO, LIMITE_FIXADAS } from "../configuracao.js";
 import { buscarPorId, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
 import { podeApagarMensagem, podeEditarMensagem } from "../utilidades/permissoes.js";
 import { formatarDuracao } from "../utilidades/texto.js";
@@ -32,6 +32,7 @@ export const estadoInicial = {
   conversaAbertaId: null,
   rascunhos: {}, // texto não enviado de cada conversa: { c1: "Olá...", c3: "..." }
   aviso: null, // o aviso flutuante: { id, texto } ou null
+  painelDadosAberto: false, // a coluna da direita, com os dados do contato
 };
 
 /* Ajudante: devolve uma lista de conversas nova, trocando só a conversa
@@ -64,6 +65,30 @@ function registroDeAuditoria(estado, acao, conversa, msg, extra) {
   };
 }
 
+/* Marcar como lida: as recebidas ganham "lida" e a marcação manual some.
+   Usada ao ABRIR a conversa e na opção "Marcar como lida" do menu */
+function marcarComoLida(conversa) {
+  return {
+    ...conversa,
+    marcadaNaoLida: false,
+    mensagens: conversa.mensagens.map((msg) => (msg.direcao === "recebida" && !msg.lida ? { ...msg, lida: true } : msg)),
+  };
+}
+
+// Fecha a conversa SE for ela que está aberta (junto vai o painel de dados)
+function fecharSeAberta(estado, id) {
+  return estado.conversaAbertaId === id ? { ...estado, conversaAbertaId: null, painelDadosAberto: false } : estado;
+}
+
+/* Nome de quem escreveu, para REGISTRO. Diferente do nomeDoAutor da tela,
+   nunca devolve "Você": o registro é lido depois, por outra pessoa */
+function quemEscreveu(msg, conversa, estado) {
+  if (msg.tipo === "nota") return `📝 ${buscarPorId(estado.atendentes, msg.autor)?.nome || "Equipe"}`;
+  if (msg.direcao === "enviada") return buscarPorId(estado.atendentes, msg.autor)?.nome || "Equipe";
+  if (conversa.tipo === "grupo" && msg.autor) return msg.autor;
+  return nomeDaConversa(conversa, estado.contatos);
+}
+
 // Acha conversa + mensagem de uma vez (ou devolve null)
 function acharMensagem(estado, conversaId, mensagemId) {
   const conversa = buscarPorId(estado.conversas, conversaId);
@@ -85,13 +110,9 @@ export function reducer(estado, acao) {
       return {
         ...estado,
         conversaAbertaId: acao.id,
-        conversas: mudarConversa(estado.conversas, acao.id, (conversa) => ({
-          ...conversa,
-          marcadaNaoLida: false,
-          mensagens: conversa.mensagens.map((msg) =>
-            msg.direcao === "recebida" && !msg.lida ? { ...msg, lida: true } : msg
-          ),
-        })),
+        // Trocou de conversa: o painel de dados (da conversa anterior) fecha
+        painelDadosAberto: acao.id === estado.conversaAbertaId && estado.painelDadosAberto,
+        conversas: mudarConversa(estado.conversas, acao.id, marcarComoLida),
       };
 
     /* Iniciar conversa pela aba de Contatos. A ação traz:
@@ -134,7 +155,100 @@ export function reducer(estado, acao) {
     }
 
     case "fecharConversa":
-      return { ...estado, conversaAbertaId: null };
+      return { ...estado, conversaAbertaId: null, painelDadosAberto: false };
+
+    case "abrirDados":
+      return { ...estado, painelDadosAberto: true };
+
+    case "fecharDados":
+      return { ...estado, painelDadosAberto: false };
+
+    /* ---------- Ações da conversa (menu ⋮ e clique direito) ---------- */
+
+    /* Fixar: { id, agora }. A regra do limite fica AQUI, no reducer: a tela
+       avisa antes, mas a regra vale mesmo que alguém esqueça de conferir */
+    case "alternarFixada": {
+      const conversa = buscarPorId(estado.conversas, acao.id);
+      if (!conversa) return estado;
+      const fixadas = estado.conversas.filter((c) => c.fixadaEm).length;
+      if (!conversa.fixadaEm && (fixadas >= LIMITE_FIXADAS || conversa.arquivada)) return estado;
+
+      return {
+        ...estado,
+        conversas: mudarConversa(estado.conversas, acao.id, (c) => ({
+          ...c,
+          fixadaEm: c.fixadaEm ? null : acao.agora,
+        })),
+      };
+    }
+
+    case "marcarLida":
+      return { ...estado, conversas: mudarConversa(estado.conversas, acao.id, marcarComoLida) };
+
+    /* Não lida: se for a conversa aberta, ela fecha. Aberta, continuaria
+       "sendo lida" e a marcação não faria sentido */
+    case "marcarNaoLida":
+      return fecharSeAberta(
+        { ...estado, conversas: mudarConversa(estado.conversas, acao.id, (c) => ({ ...c, marcadaNaoLida: true })) },
+        acao.id
+      );
+
+    /* Arquivar também desafixa (no WhatsApp é igual) e fecha a conversa.
+       Desarquivar só traz de volta para a lista */
+    case "alternarArquivada": {
+      const conversa = buscarPorId(estado.conversas, acao.id);
+      if (!conversa) return estado;
+      const arquivando = !conversa.arquivada;
+      const conversas = mudarConversa(estado.conversas, acao.id, (c) => ({
+        ...c,
+        arquivada: arquivando,
+        fixadaEm: arquivando ? null : c.fixadaEm,
+      }));
+      return arquivando ? fecharSeAberta({ ...estado, conversas }, acao.id) : { ...estado, conversas };
+    }
+
+    /* Excluir: { id, agora, auditoriaId }
+       Apagar a conversa inteira seria um jeito de "esconder" mensagens da
+       supervisão. Por isso, antes, guardamos uma cópia em texto na auditoria */
+    case "excluirConversa": {
+      const conversa = buscarPorId(estado.conversas, acao.id);
+      if (!conversa) return estado;
+
+      const copia = conversa.mensagens
+        .filter((m) => m.tipo !== "sistema")
+        .map((m) => ({
+          quem: quemEscreveu(m, conversa, estado),
+          quando: m.horario,
+          texto:
+            (m.tipo === "audio" ? `🎤 Áudio de ${formatarDuracao(m.duracao)}` : m.texto) +
+            (m.apagada ? " (já estava apagada)" : ""),
+        }));
+
+      const rascunhos = { ...estado.rascunhos };
+      delete rascunhos[acao.id];
+
+      return fecharSeAberta(
+        {
+          ...estado,
+          rascunhos,
+          // filter devolve uma lista NOVA, sem a conversa excluída
+          conversas: estado.conversas.filter((c) => c.id !== acao.id),
+          auditoria: [
+            ...estado.auditoria,
+            {
+              id: acao.auditoriaId,
+              tipo: "conversa",
+              conversaId: conversa.id,
+              conversaNome: nomeDaConversa(conversa, estado.contatos),
+              autorId: estado.atendenteLogadoId,
+              quando: acao.agora,
+              mensagens: copia,
+            },
+          ],
+        },
+        acao.id
+      );
+    }
 
     case "definirRascunho":
       return { ...estado, rascunhos: { ...estado.rascunhos, [acao.conversaId]: acao.texto } };

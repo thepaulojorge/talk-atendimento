@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
-import { contarNaoLidas, contarTotalNaoLidas, ordenarConversas } from "../utilidades/conversas.js";
+import { contarNaoLidas, contarTotalNaoLidas, nomeDaConversa, ordenarConversas } from "../utilidades/conversas.js";
 import { filtrarConversas } from "../utilidades/filtros.js";
+import { useAcoesConversa } from "../hooks/useAcoesConversa.jsx";
 import ItemConversa from "./ItemConversa.jsx";
 import CartaoPrevia from "./CartaoPrevia.jsx";
+import MenuFlutuante from "./MenuFlutuante.jsx";
 import Icone from "./Icone.jsx";
 
 // Os filtros viram DADOS: os botões são desenhados com um .map()
@@ -50,7 +52,7 @@ export default function PainelConversas({
   const temporizador = useRef(null);
 
   function aoEntrarMouse(id, elemento) {
-    if (!TEM_MOUSE) return;
+    if (!TEM_MOUSE || menu) return; // com o menu aberto, nada de cartão
     clearTimeout(temporizador.current);
     temporizador.current = setTimeout(() => {
       // Mede a posição só na hora de mostrar (a lista pode ter rolado)
@@ -61,6 +63,22 @@ export default function PainelConversas({
   function esconderPrevia() {
     clearTimeout(temporizador.current);
     setPrevia(null);
+  }
+
+  /* ---------- Menu da conversa (botão direito ou dedo pressionado) ---------- */
+  const [menu, setMenu] = useState(null); // { id, x, y, toque }
+  const { opcoesDe, dialogo } = useAcoesConversa();
+  const fecharMenu = useCallback(() => setMenu(null), []);
+  const conversaDoMenu = menu && estado.conversas.find((c) => c.id === menu.id);
+
+  function abrirMenu(id, posicao) {
+    esconderPrevia(); // o cartão e o menu não aparecem juntos
+    setMenu({ id, ...posicao });
+  }
+
+  function aoRolarLista() {
+    esconderPrevia();
+    if (menu) fecharMenu();
   }
 
   // Se o painel sumir com um temporizador pendente, ele é cancelado
@@ -152,7 +170,7 @@ export default function PainelConversas({
         </select>
       </nav>
 
-      <ul className="lista-conversas" onScroll={esconderPrevia} onMouseDown={esconderPrevia}>
+      <ul className="lista-conversas" onScroll={aoRolarLista} onMouseDown={esconderPrevia}>
         {/* Topo da lista: o cabeçalho de quem está nas arquivadas, ou o atalho para elas */}
         {vendoArquivadas ? (
           <li
@@ -186,14 +204,28 @@ export default function PainelConversas({
               key={conversa.id}
               conversa={conversa}
               termoBusca={busca}
+              selecionada={conversaDoMenu?.id === conversa.id}
               aoEntrarMouse={aoEntrarMouse}
               aoSairMouse={esconderPrevia}
+              aoAbrirMenu={abrirMenu}
             />
           ))
         )}
       </ul>
 
       {previa && <CartaoPrevia conversaId={previa.id} caixa={previa.caixa} />}
+
+      {conversaDoMenu && (
+        <MenuFlutuante
+          opcoes={opcoesDe(conversaDoMenu)}
+          x={menu.x}
+          y={menu.y}
+          folha={menu.toque}
+          previa={nomeDaConversa(conversaDoMenu, estado.contatos)}
+          aoFechar={fecharMenu}
+        />
+      )}
+      {dialogo}
     </section>
   );
 }

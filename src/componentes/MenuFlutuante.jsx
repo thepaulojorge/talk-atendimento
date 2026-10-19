@@ -10,8 +10,10 @@ import Icone from "./Icone.jsx";
    - x, y: onde abrir (posição do mouse)
    - folha: true = "folha" que sobe do rodapé (celular, aberto pelo toque)
    - previa: texto curto mostrado no topo da folha (a mensagem escolhida)
-   - aoFechar: chamado ao clicar fora, apertar Esc ou escolher uma opção */
-export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, aoFechar }) {
+   - aoFechar: chamado ao clicar fora, apertar Esc ou escolher uma opção
+   - ancora (opcional): ref do botão que abre o menu (o ⋮). Clicar nele não
+     conta como "clicar fora": quem cuida desse clique é o próprio botão */
+export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, ancora, aoFechar }) {
   const caixa = useRef(null); // o menu inteiro (na folha, inclui o fundo escuro)
   const lista = useRef(null);
   const tocouNoFundo = useRef(false);
@@ -31,7 +33,9 @@ export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, aoF
      ANTES de chegar no ouvinte do chat (que fecharia a conversa inteira) */
   useEffect(() => {
     function aoApertarFora(evento) {
-      if (!caixa.current.contains(evento.target)) aoFechar();
+      if (caixa.current.contains(evento.target)) return;
+      if (ancora?.current?.contains(evento.target)) return;
+      aoFechar();
     }
     function aoApertarTecla(evento) {
       if (evento.key === "Escape") {
@@ -47,7 +51,7 @@ export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, aoF
       document.removeEventListener("keydown", aoApertarTecla, true);
       window.removeEventListener("resize", aoFechar);
     };
-  }, [aoFechar]);
+  }, [aoFechar, ancora]);
 
   // Setas para cima e para baixo andam pelas opções (dando a volta)
   function aoNavegar(evento) {

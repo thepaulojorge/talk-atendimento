@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { useEstado } from "./estado/useEstado.js";
-import { contarTotalNaoLidas } from "./utilidades/conversas.js";
+import { buscarPorId, contarTotalNaoLidas } from "./utilidades/conversas.js";
 import TopoApp from "./componentes/TopoApp.jsx";
 import BarraLateral from "./componentes/BarraLateral.jsx";
 import Chat from "./componentes/Chat.jsx";
+import PainelDados from "./componentes/PainelDados.jsx";
 import Aviso from "./componentes/Aviso.jsx";
 
 /* O componente principal: monta a tela com os pedaços */
@@ -11,6 +12,7 @@ export default function App() {
   const { estado } = useEstado();
   const total = contarTotalNaoLidas(estado.conversas);
   const marca = estado.marca.nome;
+  const conversaAberta = buscarPorId(estado.conversas, estado.conversaAbertaId);
 
   /* Título da aba: "(5) Talk Atendimento".
      useEffect com [total, marca]: roda de novo SÓ quando um desses dois
@@ -36,6 +38,8 @@ export default function App() {
       <div className={estado.conversaAbertaId ? "app app--chat-aberto" : "app"}>
         <BarraLateral />
         <Chat />
+        {/* Terceira coluna: só existe com uma conversa aberta E o painel pedido */}
+        {conversaAberta && estado.painelDadosAberto && <PainelDados conversa={conversaAberta} />}
       </div>
       <Aviso />
     </>

@@ -1,4 +1,5 @@
 import { useEstado } from "../estado/useEstado.js";
+import { useMenuDeContexto } from "../hooks/useMenuDeContexto.js";
 import {
   buscarPorId,
   contarNaoLidas,
@@ -15,8 +16,10 @@ import Icone from "./Icone.jsx";
    a lógica é a mesma, mas o HTML aparece escrito do jeito que vai ficar */
 /* Props novas: termoBusca (para a prévia com 🔍) e os avisos de mouse,
    que o painel usa para o cartão de prévia */
-export default function ItemConversa({ conversa, termoBusca = "", aoEntrarMouse, aoSairMouse }) {
+export default function ItemConversa({ conversa, termoBusca = "", selecionada, aoEntrarMouse, aoSairMouse, aoAbrirMenu }) {
   const { estado, despachar } = useEstado();
+  // O mesmo hook das mensagens: botão direito ou dedo pressionado
+  const eventosMenu = useMenuDeContexto((posicao) => aoAbrirMenu?.(conversa.id, posicao));
 
   const nome = nomeDaConversa(conversa, estado.contatos);
   const naoLidas = contarNaoLidas(conversa);
@@ -30,6 +33,7 @@ export default function ItemConversa({ conversa, termoBusca = "", aoEntrarMouse,
     naoLidas === 0 && conversa.marcadaNaoLida && "conversa--marcada",
     conversa.id === estado.conversaAbertaId && "conversa--ativa",
     resolvida && "conversa--resolvida",
+    selecionada && "conversa--selecionada",
   ]
     .filter(Boolean)
     .join(" ");
@@ -62,6 +66,7 @@ export default function ItemConversa({ conversa, termoBusca = "", aoEntrarMouse,
          "mouseover" da versão antiga). evento.currentTarget = o próprio <li> */
       onMouseEnter={(evento) => aoEntrarMouse?.(conversa.id, evento.currentTarget)}
       onMouseLeave={aoSairMouse}
+      {...eventosMenu}
     >
       <Avatar nome={nome} grupo={conversa.tipo === "grupo"} />
 
