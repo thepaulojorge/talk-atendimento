@@ -6,11 +6,14 @@ import BarraLateral from "./componentes/BarraLateral.jsx";
 import Chat from "./componentes/Chat.jsx";
 import PainelDados from "./componentes/PainelDados.jsx";
 import Aviso from "./componentes/Aviso.jsx";
+import TelaLogin from "./componentes/TelaLogin.jsx";
 
 /* O componente principal: monta a tela com os pedaços */
 export default function App() {
   const { estado } = useEstado();
-  const total = contarTotalNaoLidas(estado.conversas);
+  const logado = Boolean(estado.atendenteLogadoId);
+  // Na tela de login, o título não entrega quantas mensagens há
+  const total = logado ? contarTotalNaoLidas(estado.conversas) : 0;
   const marca = estado.marca.nome;
   const conversaAberta = buscarPorId(estado.conversas, estado.conversaAbertaId);
 
@@ -21,11 +24,25 @@ export default function App() {
     document.title = total > 0 ? `(${total}) ${marca}` : marca;
   }, [total, marca]);
 
+  /* Carregando: ainda não sabemos se alguém já estava logado neste
+     navegador. Mostrar o login agora faria a tela "piscar" para quem estava */
+  if (estado.carregando) return <p className="aviso-carregamento">Carregando…</p>;
+
   if (estado.erro) {
     return (
       <>
         <TopoApp />
         <p className="aviso-carregamento">{estado.erro}</p>
+      </>
+    );
+  }
+
+  // Ninguém logado: só a tela de login (e o aviso, para o "Olá, Paulo!")
+  if (!logado) {
+    return (
+      <>
+        <TelaLogin />
+        <Aviso />
       </>
     );
   }

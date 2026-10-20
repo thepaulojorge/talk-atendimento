@@ -2,9 +2,17 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { ContextoEstado } from "./contexto.js";
 import { reducer, estadoInicial } from "./reducer.js";
 import { avisar } from "./avisos.js";
-import { apagarSalvos, juntarComSalvos, lerSalvos, montarPacote, salvar } from "./armazenamento.js";
+import {
+  apagarSalvos,
+  juntarComSalvos,
+  lerSalvos,
+  lerSessao,
+  montarPacote,
+  salvar,
+  salvarSessao,
+} from "./armazenamento.js";
 import { trazerDatasParaPerto } from "../utilidades/datas.js";
-import { ATENDENTE_PADRAO } from "../configuracao.js";
+import { MARCA_PADRAO } from "../configuracao.js";
 
 const ATRASO_SALVAR_MS = 300;
 
@@ -22,7 +30,8 @@ function dadosDeExemplo(original) {
     respostasRapidas: dados.respostasRapidas || [],
     auditoria: dados.auditoria || [],
     rascunhos: {},
-    atendenteLogadoId: ATENDENTE_PADRAO,
+    marca: MARCA_PADRAO,
+    estacoes: dados.estacoes || [],
   };
 }
 
@@ -56,11 +65,20 @@ export default function ProvedorEstado({ children }) {
 
         original.current = dados;
         const salvos = lerSalvos();
+
+        // Já tinha alguém logado neste navegador? Continua logado
+        // (desde que essa pessoa ainda exista no dados.json)
+        const sessao = lerSessao();
+        const sessaoValida = sessao && dados.atendentes.some((a) => a.id === sessao.atendenteId);
+
         pularSalvamento.current = true;
         despachar({
           tipo: "dadosCarregados",
-          // Tem algo salvo? Junta com o dados.json. Não tem? Usa o exemplo
-          dados: salvos ? juntarComSalvos(dados, salvos) : dadosDeExemplo(dados),
+          dados: {
+            // Tem algo salvo? Junta com o dados.json. Não tem? Usa o exemplo
+            ...(salvos ? juntarComSalvos(dados, salvos) : dadosDeExemplo(dados)),
+            ...(sessaoValida && { sessao, atendenteLogadoId: sessao.atendenteId }),
+          },
         });
       } catch (erro) {
         console.error("Falha ao carregar dados.json:", erro);
@@ -86,7 +104,7 @@ export default function ProvedorEstado({ children }) {
      Um efeito é o lugar certo aqui: o localStorage é um sistema DE FORA
      do React, e o efeito mantém os dois sincronizados */
   const pacotePendente = useRef(null);
-  const { carregando, conversas, contatos, etiquetas, auditoria, rascunhos, atendenteLogadoId } = estado;
+  const { carregando, conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes, sessao } = estado;
 
   useEffect(() => {
     if (carregando) return;
@@ -95,7 +113,7 @@ export default function ProvedorEstado({ children }) {
       return;
     }
 
-    const pacote = montarPacote({ conversas, contatos, etiquetas, auditoria, rascunhos, atendenteLogadoId });
+    const pacote = montarPacote({ conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes });
     pacotePendente.current = pacote;
 
     const temporizador = setTimeout(() => {
@@ -110,7 +128,14 @@ export default function ProvedorEstado({ children }) {
     }, ATRASO_SALVAR_MS);
 
     return () => clearTimeout(temporizador);
-  }, [carregando, conversas, contatos, etiquetas, auditoria, rascunhos, atendenteLogadoId]);
+  }, [carregando, conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes]);
+
+  /* A sessão é salva na hora (sem debounce): entrar e sair são raros.
+     Esperamos o carregamento: antes dele, a sessão do estado ainda é null,
+     e salvar null APAGARIA o login guardado */
+  useEffect(() => {
+    if (!carregando) salvarSessao(sessao);
+  }, [carregando, sessao]);
 
   // Fechou ou recarregou a aba antes dos 300ms? Salva na hora o que estava pendente
   useEffect(() => {

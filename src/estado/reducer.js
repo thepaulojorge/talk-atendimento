@@ -13,7 +13,7 @@
    2. Ser PURO: com o mesmo estado e a mesma ação, devolver sempre o mesmo
       resultado. Por isso nada de Date.now() ou new Date() aqui dentro:
       ids e horários são criados ANTES, no componente, e vêm na ação. */
-import { MARCA_PADRAO, ATENDENTE_PADRAO, LIMITE_FIXADAS } from "../configuracao.js";
+import { MARCA_PADRAO, LIMITE_FIXADAS } from "../configuracao.js";
 import { buscarPorId, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
 import { podeApagarMensagem, podeEditarMensagem } from "../utilidades/permissoes.js";
 import { formatarDuracao, normalizar } from "../utilidades/texto.js";
@@ -28,7 +28,9 @@ export const estadoInicial = {
   etiquetas: [],
   respostasRapidas: [],
   auditoria: [],
-  atendenteLogadoId: ATENDENTE_PADRAO,
+  estacoes: [], // as estações de atendimento e a escala de turnos de cada uma
+  sessao: null, // quem entrou: { email, atendenteId, estacaoId?, turnoId?, desde }
+  atendenteLogadoId: null, // a PESSOA por trás da sessão (null = tela de login)
   conversaAbertaId: null,
   rascunhos: {}, // texto não enviado de cada conversa: { c1: "Olá...", c3: "..." }
   aviso: null, // o aviso flutuante: { id, texto } ou null
@@ -58,11 +60,18 @@ function registroDeAuditoria(estado, acao, conversa, msg, extra) {
     conversaNome: nomeDaConversa(conversa, estado.contatos),
     mensagemId: msg.id,
     autorId: estado.atendenteLogadoId,
+    ...deOndeVeio(estado),
     quando: acao.agora,
     tipoMensagem: msg.tipo,
     antes: msg.tipo === "audio" ? `🎤 Áudio de ${formatarDuracao(msg.duracao)}` : msg.texto,
     ...extra, // tipo ("edicao" ou "exclusao") e, na edição, o "depois"
   };
+}
+
+/* Estação e turno de quem fez a ação, para a auditoria.
+   Numa estação, o registro diz "Paulo, Estação 01, turno da manhã" */
+function deOndeVeio(estado) {
+  return { estacaoId: estado.sessao?.estacaoId || null, turnoId: estado.sessao?.turnoId || null };
 }
 
 /* Marcar como lida: as recebidas ganham "lida" e a marcação manual some.
@@ -260,6 +269,7 @@ export function reducer(estado, acao) {
               conversaId: conversa.id,
               conversaNome: nomeDaConversa(conversa, estado.contatos),
               autorId: estado.atendenteLogadoId,
+              ...deOndeVeio(estado),
               quando: acao.agora,
               mensagens: copia,
             },
@@ -496,10 +506,21 @@ export function reducer(estado, acao) {
       };
     }
 
-    /* ⚠️ SIMULAÇÃO de login: troca quem está usando o sistema.
-       Na parte 4c, isso vira a tela de login de verdade */
-    case "trocarAtendente":
-      return { ...estado, atendenteLogadoId: acao.id };
+    /* ---------- Login ---------- */
+
+    // { sessao } (a tela de login já conferiu e-mail, senha e escala)
+    case "entrar":
+      return { ...estado, sessao: acao.sessao, atendenteLogadoId: acao.sessao.atendenteId };
+
+    // Sair: volta para a tela de login, sem nada aberto
+    case "sair":
+      return { ...estado, sessao: null, atendenteLogadoId: null, conversaAbertaId: null, painelDadosAberto: false };
+
+    /* Configurações (só a diretoria): { marca, estacoes }
+       A tela já confere a permissão; o reducer confere de novo */
+    case "salvarConfiguracoes":
+      if (buscarPorId(estado.atendentes, estado.atendenteLogadoId)?.papel !== "diretoria") return estado;
+      return { ...estado, marca: acao.marca, estacoes: acao.estacoes };
 
     // ✓✓ fica azul (por enquanto, quem avisa é uma simulação)
     case "mensagemLida":

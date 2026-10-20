@@ -2438,3 +2438,225 @@ kbd {
     user-select: none;
   }
 }
+
+/* =========================================================
+   TELA DE LOGIN
+   ========================================================= */
+.login {
+  flex: 1;
+  display: grid;
+  place-items: center; /* o cartão fica no meio da tela */
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  background: var(--fundo-app);
+  overflow-y: auto;
+}
+
+.login__cartao {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 28px;
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: var(--fundo-painel);
+  box-shadow: var(--sombra);
+}
+
+.login__marca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--texto-suave);
+}
+
+.login__marca .icone {
+  width: 22px;
+  height: 22px;
+}
+
+.login__titulo {
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.login__texto {
+  margin-top: -6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+.login__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.login__campo input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--fundo-hover);
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.login__campo input:focus {
+  outline: none;
+  border-color: var(--destaque);
+}
+
+.login__erro {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--alerta) 12%, transparent);
+  color: var(--alerta);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.login__entrar {
+  height: 46px;
+  margin-top: 4px;
+  border-radius: 23px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 700;
+}
+
+.login__entrar:hover:not(:disabled) {
+  background: var(--destaque-forte);
+}
+
+.login__entrar:disabled,
+.login__demo button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* "Entrar na demonstração": separado do login normal por uma linha */
+.login__demo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borda);
+  text-align: center;
+}
+
+.login__demo button {
+  height: 42px;
+  border: 1px solid var(--borda);
+  border-radius: 21px;
+  font-weight: 600;
+}
+
+.login__demo button:hover:not(:disabled) {
+  background: var(--fundo-hover);
+}
+
+.login__demo p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+/* =========================================================
+   CONFIGURAÇÕES (diretoria)
+   ========================================================= */
+.configuracoes {
+  max-width: 560px;
+}
+
+.config__secao {
+  margin-top: 18px;
+}
+
+.config__secao h3 {
+  margin-bottom: 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--texto-suave);
+}
+
+.config__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.config__campo input,
+.escala select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo-hover);
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+}
+
+.config__campo input:focus,
+.escala select:focus {
+  outline: none;
+  border-color: var(--destaque);
+}
+
+.config__dica {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+/* A tabela rola de lado no celular, em vez de espremer as colunas */
+.escala {
+  overflow-x: auto;
+}
+
+.escala table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.escala th,
+.escala td {
+  padding: 6px;
+  text-align: left;
+}
+
+.escala thead th {
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.escala thead small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.escala tbody th {
+  white-space: nowrap;
+}
+
+.escala select {
+  width: 100%;
+  min-width: 110px;
+}

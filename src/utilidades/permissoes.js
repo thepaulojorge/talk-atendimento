@@ -36,3 +36,8 @@ export function podeApagarMensagem(estado, msg) {
 export function podeEncaminhar(msg) {
   return !msg.apagada && (msg.tipo === "texto" || msg.tipo === "audio");
 }
+
+// Configurações (nome da empresa, escala de turnos): só a diretoria
+export function podeConfigurar(estado) {
+  return papelDe(estado, estado.atendenteLogadoId) === "diretoria";
+}

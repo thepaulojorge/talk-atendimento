@@ -5,8 +5,13 @@
    ⚠️ É temporário: cada navegador tem a SUA cópia, e ninguém da equipe vê
    o que o outro fez. Com o backend, quem guarda tudo é o banco de dados. */
 
+import { MARCA_PADRAO } from "../configuracao.js";
+
 // Nome novo: a versão 1 (clonewpp) usa "espelho-dados" no mesmo domínio
 const CHAVE_DADOS = "talk-dados";
+/* A sessão (quem está logado) fica numa chave SEPARADA: "Restaurar dados
+   de exemplo" apaga os dados, mas não tira ninguém do sistema */
+const CHAVE_SESSAO = "talk-sessao";
 
 /* Versão do FORMATO dos dados. Se um dia a estrutura mudar (um campo
    novo obrigatório, por exemplo), aumentamos este número e os dados
@@ -23,7 +28,8 @@ export function montarPacote(estado) {
     etiquetas: estado.etiquetas,
     auditoria: estado.auditoria,
     rascunhos: estado.rascunhos,
-    atendenteLogadoId: estado.atendenteLogadoId,
+    marca: estado.marca,
+    estacoes: estado.estacoes,
   };
 }
 
@@ -62,6 +68,7 @@ export function apagarSalvos() {
 /* Junta o dados.json com o que foi salvo.
    - conversas, contatos, auditoria e rascunhos: do que foi salvo
    - atendentes e respostas rápidas: sempre do dados.json (são "da empresa")
+   - marca e escala das estações: do salvo (a diretoria pode ter mudado)
    - etiquetas: a LISTA vem do dados.json (se surgir uma etiqueta nova no
      arquivo, ela aparece), mas o NOME das personalizáveis vem do salvo
    Adaptar dados salvos a um formato que mudou se chama MIGRAÇÃO */
@@ -71,9 +78,6 @@ export function juntarComSalvos(dados, salvos) {
     return etiqueta.editavel && salva ? { ...etiqueta, nome: salva.nome } : etiqueta;
   });
 
-  // Só aceita o atendente salvo se ele ainda existir no dados.json
-  const atendenteExiste = dados.atendentes.some((a) => a.id === salvos.atendenteLogadoId);
-
   return {
     atendentes: dados.atendentes,
     respostasRapidas: dados.respostasRapidas || [],
@@ -82,6 +86,28 @@ export function juntarComSalvos(dados, salvos) {
     etiquetas,
     auditoria: Array.isArray(salvos.auditoria) ? salvos.auditoria : [],
     rascunhos: salvos.rascunhos || {},
-    ...(atendenteExiste && { atendenteLogadoId: salvos.atendenteLogadoId }),
+    marca: salvos.marca || MARCA_PADRAO,
+    // Dados salvos ANTES da escala existir não têm "estacoes": usa a do dados.json
+    estacoes: salvos.estacoes || dados.estacoes || [],
   };
+}
+
+/* ---------- Sessão ----------
+   sessao = { email, atendenteId, estacaoId?, turnoId?, desde } */
+export function salvarSessao(sessao) {
+  try {
+    if (sessao) localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
+    else localStorage.removeItem(CHAVE_SESSAO); // saiu: apaga
+  } catch {
+    // aba anônima: o login só não sobrevive a um recarregar
+  }
+}
+
+export function lerSessao() {
+  try {
+    const sessao = JSON.parse(localStorage.getItem(CHAVE_SESSAO));
+    return sessao?.atendenteId ? sessao : null;
+  } catch {
+    return null;
+  }
 }

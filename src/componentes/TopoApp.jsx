@@ -2,11 +2,13 @@ import { useCallback, useRef, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
 import { buscarPorId } from "../utilidades/conversas.js";
-import { PAPEIS } from "../utilidades/permissoes.js";
+import { PAPEIS, papelDe, podeConfigurar } from "../utilidades/permissoes.js";
+import { descreverSessao } from "../utilidades/turnos.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
 import MenuFlutuante from "./MenuFlutuante.jsx";
 import DialogoConfirmacao from "./DialogoConfirmacao.jsx";
+import DialogoConfiguracoes from "./DialogoConfiguracoes.jsx";
 import { useTema } from "../hooks/useTema.js";
 
 /* A barra do topo: a marca (white-label) e quem está logado */
@@ -14,11 +16,10 @@ export default function TopoApp() {
   const { estado, despachar, restaurarExemplo } = useEstado();
   const { tema, alternarTema } = useTema();
   const [confirmandoRestaurar, setConfirmandoRestaurar] = useState(false);
+  const [configurando, setConfigurando] = useState(false);
   const atendente = buscarPorId(estado.atendentes, estado.atendenteLogadoId);
 
-  /* ⚠️ SIMULAÇÃO de login: clicar no seu nome deixa "entrar" como outra
-     pessoa, para testar a visão de cada um (atendente, supervisão, diretoria).
-     Na parte 4c, isto dá lugar à tela de login de verdade */
+  // Menu do seu nome: configurações (diretoria), sair e restaurar
   const botao = useRef(null);
   const [menu, setMenu] = useState(null);
   const fecharMenu = useCallback(() => setMenu(null), []);
@@ -29,23 +30,22 @@ export default function TopoApp() {
     setMenu({ x: caixa.right, y: caixa.bottom + 6 });
   }
 
-  function trocar(id) {
-    if (id === estado.atendenteLogadoId) return;
-    despachar({ tipo: "trocarAtendente", id });
-    avisar(despachar, `Agora você está como ${buscarPorId(estado.atendentes, id).nome}`);
+  function sair() {
+    despachar({ tipo: "sair" });
+    avisar(despachar, "Você saiu. Até logo!");
   }
 
-  const opcoes = estado.atendentes.map((a) => {
-    // Mostra o papel de quem não é atendente: "Beatriz · Supervisão"
-    const papel = a.papel && a.papel !== "atendente" ? ` · ${PAPEIS[a.papel]}` : "";
-    const atual = a.id === estado.atendenteLogadoId;
-    return { id: a.id, rotulo: `${atual ? "✓ " : ""}${a.nome}${papel}`, acao: () => trocar(a.id) };
-  });
-  // Separado das opções de login: volta tudo ao estado inicial
-  opcoes.push(
+  /* Título do menu: de onde você entrou.
+     Estação: "Estação 01 · Turno da manhã". Conta pessoal: o papel */
+  const onde = descreverSessao(estado.sessao, estado) || PAPEIS[papelDe(estado, estado.atendenteLogadoId)];
+
+  const opcoes = [
+    podeConfigurar(estado) && { id: "configuracoes", rotulo: "Configurações", icone: "engrenagem", acao: () => setConfigurando(true) },
+    { id: "sair", rotulo: "Sair", icone: "sair", acao: sair },
     { divisoria: true },
-    { id: "restaurar", rotulo: "↺ Restaurar dados de exemplo", teste: true, acao: () => setConfirmandoRestaurar(true) }
-  );
+    // Ferramenta de teste: volta tudo ao estado inicial
+    { id: "restaurar", rotulo: "↺ Restaurar dados de exemplo", teste: true, acao: () => setConfirmandoRestaurar(true) },
+  ].filter(Boolean);
 
   // O botão mostra o tema para onde você VAI: no preto aparece o sol
   const rotuloTema = tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro";
@@ -73,7 +73,7 @@ export default function TopoApp() {
             className="atendente-logado"
             aria-haspopup="menu"
             aria-expanded={Boolean(menu)}
-            aria-label="Trocar atendente (simulação)"
+            aria-label={`${atendente.nome}: menu da conta`}
             onClick={alternarMenu}
           >
             <span className="atendente-logado__nome">{atendente.nome}</span>
@@ -84,7 +84,7 @@ export default function TopoApp() {
 
       {menu && (
         <MenuFlutuante
-          titulo="Simular login como"
+          titulo={onde}
           opcoes={opcoes}
           x={menu.x}
           y={menu.y}
@@ -92,6 +92,8 @@ export default function TopoApp() {
           aoFechar={fecharMenu}
         />
       )}
+
+      {configurando && <DialogoConfiguracoes aoFechar={() => setConfigurando(false)} />}
 
       {confirmandoRestaurar && (
         <DialogoConfirmacao

@@ -17,7 +17,13 @@ import Icone from "./Icone.jsx";
 export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, titulo, ancora, aoFechar }) {
   const caixa = useRef(null); // o menu inteiro (na folha, inclui o fundo escuro)
   const lista = useRef(null);
-  const tocouNoFundo = useRef(false);
+  /* Na folha (aberta pelo dedo), a folha sobe POR BAIXO do dedo que ainda
+     está na tela. Ao soltar, o navegador manda um "click" no ponto do toque,
+     que cairia numa opção (ou no fundo escuro). Por isso, na folha, um clique
+     só vale se o toque COMEÇOU dentro dela: "pronto" vira true no primeiro
+     pointerdown que acontece depois que a folha apareceu */
+  const pronto = useRef(!folha);
+  const valeOClique = (evento) => pronto.current || evento.detail === 0; // detail 0 = teclado (Enter/Espaço)
   const itens = limparDivisorias(opcoes);
 
   // Posiciona perto do mouse sem sair da tela (a folha não precisa: fica no rodapé)
@@ -64,7 +70,8 @@ export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, tit
     botoes[(atual + passo + botoes.length) % botoes.length]?.focus();
   }
 
-  function escolher(opcao) {
+  function escolher(evento, opcao) {
+    if (!valeOClique(evento)) return; // o "click" do dedo que abriu o menu
     aoFechar(); // fecha primeiro: a ação pode abrir outra coisa (uma janela, a edição)
     opcao.acao();
   }
@@ -96,7 +103,7 @@ export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, tit
               role="menuitem"
               // perigo = vermelho (excluir) | teste = discreto (ferramentas de simulação)
               className={opcao.perigo ? "perigo" : opcao.teste ? "menu__teste" : undefined}
-              onClick={() => escolher(opcao)}
+              onClick={(evento) => escolher(evento, opcao)}
             >
               {opcao.icone && <Icone nome={opcao.icone} />}
               <span className="menu__texto">{opcao.rotulo}</span>
@@ -109,15 +116,13 @@ export default function MenuFlutuante({ opcoes, x, y, folha = false, previa, tit
 
   // Portal: desenhado no <body>, por cima de tudo (como o cartão de prévia)
   return createPortal(
-    <div ref={caixa}>
-      {/* Na folha, tocar no fundo escuro fecha. Mas atenção: ao soltar o dedo
-          que ABRIU o menu, o navegador manda um "click" bem aqui, no fundo.
-          Por isso só fechamos se o toque também COMEÇOU no fundo */}
+    <div ref={caixa} onPointerDownCapture={() => (pronto.current = true)}>
+      {/* Na folha, tocar no fundo escuro fecha (com a mesma proteção
+          das opções: o "click" do dedo que abriu o menu não conta) */}
       {folha && (
         <div
           className="menu-folha__fundo"
-          onPointerDown={() => (tocouNoFundo.current = true)}
-          onClick={() => tocouNoFundo.current && aoFechar()}
+          onClick={(evento) => valeOClique(evento) && aoFechar()}
         />
       )}
       {menu}
