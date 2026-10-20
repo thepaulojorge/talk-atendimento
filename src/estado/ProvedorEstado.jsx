@@ -13,6 +13,7 @@ import {
 } from "./armazenamento.js";
 import { trazerDatasParaPerto } from "../utilidades/datas.js";
 import { MARCA_PADRAO } from "../configuracao.js";
+import { buscarDados } from "../api.js";
 
 const ATRASO_SALVAR_MS = 300;
 
@@ -56,11 +57,8 @@ export default function ProvedorEstado({ children }) {
 
     async function carregar() {
       try {
-        // BASE_URL: o caminho do site. Em casa é "/", no GitHub Pages
-        // é "/talk-atendimento/". Assim o fetch funciona nos dois lugares
-        const resposta = await fetch(`${import.meta.env.BASE_URL}dados.json`);
-        if (!resposta.ok) throw new Error(`Erro ${resposta.status}`);
-        const dados = await resposta.json();
+        // Da API (em casa) ou do dados.json (no GitHub Pages, por enquanto)
+        const dados = await buscarDados();
         if (cancelado) return;
 
         original.current = dados;
@@ -81,8 +79,9 @@ export default function ProvedorEstado({ children }) {
           },
         });
       } catch (erro) {
-        console.error("Falha ao carregar dados.json:", erro);
-        if (!cancelado) despachar({ tipo: "erroAoCarregar", mensagem: "Não foi possível carregar as conversas." });
+        console.error("Falha ao carregar os dados:", erro);
+        // A mensagem vem pronta do api.js, explicando o que aconteceu
+        if (!cancelado) despachar({ tipo: "erroAoCarregar", mensagem: erro.message });
       }
     }
 
