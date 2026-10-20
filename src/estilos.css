@@ -2660,3 +2660,71 @@ kbd {
   width: 100%;
   min-width: 110px;
 }
+
+/* =========================================================
+   SUPERVISÃO: filtros de estação e turno
+   ========================================================= */
+/* Agora são 5 seletores numa linha; a busca vai para a linha de baixo */
+.supervisao__filtros {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.campo-filtro--busca {
+  grid-column: 1 / -1;
+}
+
+/* De onde veio a ação: "Estação 01 · Manhã" */
+.registro__origem {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+/* Botão "ligado": o painel está aberto */
+.botao-supervisao[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--texto-topo) 18%, transparent);
+}
+
+@media (max-width: 768px) {
+  .supervisao__filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Celular estreito: o topo tem a marca, Supervisão, tema e você.
+   O seu nome sai (o avatar e o menu continuam) para a marca caber numa linha */
+@media (max-width: 480px) {
+  .atendente-logado__nome {
+    display: none;
+  }
+
+  .atendente-logado {
+    padding-left: 4px;
+  }
+
+  .topo-app {
+    gap: 12px; /* nunca deixa a marca encostar nos botões */
+  }
+
+  /* min-width: 0 deixa o lado esquerdo encolher (sem ele, o texto empurra
+     os botões para fora da tela em vez de ganhar as reticências) */
+  .topo-app__esquerda {
+    min-width: 0;
+  }
+
+  .topo-app__logo {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .topo-app__nome {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* nome de empresa enorme: "Transportadora Ser…" */
+  }
+}

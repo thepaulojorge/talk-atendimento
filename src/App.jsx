@@ -7,6 +7,7 @@ import Chat from "./componentes/Chat.jsx";
 import PainelDados from "./componentes/PainelDados.jsx";
 import Aviso from "./componentes/Aviso.jsx";
 import TelaLogin from "./componentes/TelaLogin.jsx";
+import PainelSupervisao from "./componentes/PainelSupervisao.jsx";
 
 /* O componente principal: monta a tela com os pedaços */
 export default function App() {
@@ -51,13 +52,18 @@ export default function App() {
     <>
       {/* <> </> é um "Fragment": agrupa elementos sem criar uma div extra */}
       <TopoApp />
-      {/* No celular, a classe app--chat-aberto troca a lista pelo chat */}
-      <div className={estado.conversaAbertaId ? "app app--chat-aberto" : "app"}>
-        <BarraLateral />
-        <Chat />
-        {/* Terceira coluna: só existe com uma conversa aberta E o painel pedido */}
-        {conversaAberta && estado.painelDadosAberto && <PainelDados conversa={conversaAberta} />}
-      </div>
+      {/* O painel de supervisão ocupa o lugar das conversas */}
+      {estado.tela === "supervisao" ? (
+        <PainelSupervisao />
+      ) : (
+        /* No celular, a classe app--chat-aberto troca a lista pelo chat */
+        <div className={estado.conversaAbertaId ? "app app--chat-aberto" : "app"}>
+          <BarraLateral />
+          <Chat />
+          {/* Terceira coluna: só existe com uma conversa aberta E o painel pedido */}
+          {conversaAberta && estado.painelDadosAberto && <PainelDados conversa={conversaAberta} />}
+        </div>
+      )}
       <Aviso />
     </>
   );

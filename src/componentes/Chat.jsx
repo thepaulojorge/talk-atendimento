@@ -74,7 +74,9 @@ function ChatAberto({ conversa }) {
 
   // Estado local desta conversa (zera sozinho ao trocar, por causa da key)
   const [respondendoAId, setRespondendoAId] = useState(null);
-  const [destacadaId, setDestacadaId] = useState(null);
+  /* Destaque: começa com a mensagem pedida pela supervisão (se houver).
+     useState com função: lido UMA vez, quando a conversa abre */
+  const [destacadaId, setDestacadaId] = useState(() => estado.mensagemEmFoco);
 
   /* Menu e ações das mensagens. Guardamos só os IDs: a mensagem em si
      é buscada na hora, sempre a versão mais nova do estado */

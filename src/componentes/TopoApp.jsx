@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
 import { buscarPorId } from "../utilidades/conversas.js";
-import { PAPEIS, papelDe, podeConfigurar } from "../utilidades/permissoes.js";
+import { PAPEIS, papelDe, podeConfigurar, podeVerAuditoria } from "../utilidades/permissoes.js";
 import { descreverSessao } from "../utilidades/turnos.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
@@ -55,11 +55,26 @@ export default function TopoApp() {
       <div className="topo-app__esquerda">
         {/* O nome vem do estado: quando a empresa trocar, muda aqui sozinho */}
         <span className="topo-app__logo">
-          <Icone nome="logo" /> {estado.marca.nome}
+          <Icone nome="logo" />
+          {/* span próprio: assim só o TEXTO ganha reticências quando não cabe */}
+          <span className="topo-app__nome">{estado.marca.nome}</span>
         </span>
       </div>
 
       <div className="topo-app__direita">
+        {/* Só supervisão e diretoria veem este botão. aria-pressed: "ligado"
+            enquanto o painel está aberto (clicar de novo volta às conversas) */}
+        {podeVerAuditoria(estado) && (
+          <button
+            type="button"
+            className="botao-supervisao"
+            aria-pressed={estado.tela === "supervisao"}
+            onClick={() => despachar({ tipo: estado.tela === "supervisao" ? "fecharSupervisao" : "abrirSupervisao" })}
+          >
+            <Icone nome="escudo" />
+            <span className="botao-supervisao__texto">Supervisão</span>
+          </button>
+        )}
         <button type="button" className="botao-tema" aria-label={rotuloTema} title={rotuloTema} onClick={alternarTema}>
           <Icone nome={tema === "claro" ? "lua" : "sol"} />
         </button>

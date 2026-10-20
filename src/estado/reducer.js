@@ -15,7 +15,7 @@
       ids e horários são criados ANTES, no componente, e vêm na ação. */
 import { MARCA_PADRAO, LIMITE_FIXADAS } from "../configuracao.js";
 import { buscarPorId, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
-import { podeApagarMensagem, podeEditarMensagem } from "../utilidades/permissoes.js";
+import { podeApagarMensagem, podeEditarMensagem, podeVerAuditoria } from "../utilidades/permissoes.js";
 import { formatarDuracao, normalizar } from "../utilidades/texto.js";
 
 export const estadoInicial = {
@@ -35,6 +35,8 @@ export const estadoInicial = {
   rascunhos: {}, // texto não enviado de cada conversa: { c1: "Olá...", c3: "..." }
   aviso: null, // o aviso flutuante: { id, texto } ou null
   painelDadosAberto: false, // a coluna da direita, com os dados do contato
+  tela: "conversas", // "conversas" ou "supervisao" (o painel ocupa o lugar das conversas)
+  mensagemEmFoco: null, // id da mensagem a destacar ao abrir a conversa (vindo da supervisão)
 };
 
 /* Ajudante: devolve uma lista de conversas nova, trocando só a conversa
@@ -138,6 +140,7 @@ export function reducer(estado, acao) {
       return {
         ...estado,
         conversaAbertaId: acao.id,
+        mensagemEmFoco: null,
         // Trocou de conversa: o painel de dados (da conversa anterior) fecha
         painelDadosAberto: acao.id === estado.conversaAbertaId && estado.painelDadosAberto,
         conversas: mudarConversa(estado.conversas, acao.id, marcarComoLida),
@@ -514,7 +517,31 @@ export function reducer(estado, acao) {
 
     // Sair: volta para a tela de login, sem nada aberto
     case "sair":
-      return { ...estado, sessao: null, atendenteLogadoId: null, conversaAbertaId: null, painelDadosAberto: false };
+      return {
+        ...estado,
+        sessao: null,
+        atendenteLogadoId: null,
+        conversaAbertaId: null,
+        painelDadosAberto: false,
+        tela: "conversas",
+      };
+
+    /* ---------- Supervisão ---------- */
+
+    // Só supervisão e diretoria entram (o botão já some para os outros)
+    case "abrirSupervisao":
+      return podeVerAuditoria(estado) ? { ...estado, tela: "supervisao" } : estado;
+
+    case "fecharSupervisao":
+      return { ...estado, tela: "conversas" };
+
+    /* Clicou no nome da conversa num registro: volta para as conversas,
+       abre a conversa e destaca a mensagem editada ou apagada.
+       { conversaId, mensagemId? } */
+    case "verNaConversa": {
+      const aberta = reducer({ ...estado, tela: "conversas" }, { tipo: "abrirConversa", id: acao.conversaId });
+      return { ...aberta, mensagemEmFoco: acao.mensagemId || null };
+    }
 
     /* Configurações (só a diretoria): { marca, estacoes }
        A tela já confere a permissão; o reducer confere de novo */
