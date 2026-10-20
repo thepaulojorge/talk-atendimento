@@ -2728,3 +2728,198 @@ kbd {
     text-overflow: ellipsis; /* nome de empresa enorme: "Transportadora Ser…" */
   }
 }
+
+/* =========================================================
+   BARRA DE ÍCONES (como a do WhatsApp Web)
+   No computador: em pé, na esquerda. No celular: deitada, no rodapé
+   ========================================================= */
+/* "corpo" = barra de ícones + o conteúdo da seção (conversas ou supervisão) */
+.corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* O conteúdo ocupa o resto; min-width: 0 deixa ele encolher sem vazar */
+.corpo > .app,
+.corpo > .supervisao {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-lateral {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  background: var(--fundo-painel);
+  border-right: 1px solid var(--borda);
+}
+
+.menu-lateral__grupo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* O espaço vazio que empurra o grupo de baixo para o fim da barra */
+.menu-lateral__espaco {
+  flex: 1;
+}
+
+.menu-lateral__divisoria {
+  width: 28px;
+  height: 1px;
+  margin: 4px 0;
+  background: var(--borda);
+}
+
+.menu-lateral__botao {
+  position: relative; /* referência para o contador no canto */
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--texto-suave);
+}
+
+.menu-lateral__botao:hover {
+  background: var(--fundo-hover);
+  color: var(--texto);
+}
+
+/* A seção aberta: fundo marcado e ícone com a cor forte */
+.menu-lateral__botao[aria-current="page"] {
+  background: var(--fundo-ativo);
+  color: var(--texto);
+}
+
+.menu-lateral__botao .icone {
+  width: 22px;
+  height: 22px;
+}
+
+/* Total de não lidas no canto do ícone de Conversas */
+.menu-lateral__contador {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--fundo-painel); /* "recorta" o contador do ícone */
+  border-radius: 9px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  box-sizing: border-box; /* a borda e o espaço interno ficam DENTRO dos 18px */
+}
+
+.menu-lateral__conta .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+/* ----- Topo: só informa quem está logado ----- */
+.topo-app__sessao {
+  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--texto-topo);
+}
+
+.topo-app__sessao span {
+  opacity: 0.75;
+}
+
+/* ----- Filtros: o total ao lado do nome e o botão "Mais" ----- */
+.filtro__total {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--fundo-ativo);
+  color: var(--texto);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filtro.ativo .filtro__total {
+  background: color-mix(in srgb, var(--sobre-destaque) 18%, transparent);
+  color: inherit;
+}
+
+/* Com a barra de ícones, a coluna ficou mais estreita: os botões dos
+   filtros ficam um pouco mais justos para os quatro caberem numa linha */
+.filtros {
+  gap: 4px;
+}
+
+.filtros .filtro {
+  padding: 5px 10px;
+}
+
+/* Tela grande: a barra de ícones "roubou" 64px; a coluna devolve 20 deles */
+@media (min-width: 1100px) {
+  :root {
+    --largura-lateral: 380px;
+  }
+}
+
+.filtro--mais {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis; /* etiqueta de nome comprido não estica o botão */
+}
+
+/* ----- Celular: a barra vira um rodapé com os ícones lado a lado ----- */
+@media (max-width: 768px) {
+  .corpo {
+    flex-direction: column;
+  }
+
+  .menu-lateral {
+    order: 2; /* no HTML ela vem antes; no celular, vai para depois do conteúdo */
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right: none;
+    border-top: 1px solid var(--borda);
+  }
+
+  .menu-lateral__grupo {
+    display: contents; /* os ícones dos dois grupos ficam todos na mesma fileira */
+  }
+
+  .menu-lateral__espaco,
+  .menu-lateral__divisoria {
+    display: none;
+  }
+
+  /* Dentro de uma conversa, o rodapé some: a tela é toda do chat */
+  .corpo--chat-aberto .menu-lateral {
+    display: none;
+  }
+
+  /* O rodapé já desconta a barrinha do iPhone; a lista não precisa mais */
+  .lista-conversas,
+  .lista-contatos {
+    padding-bottom: 0;
+  }
+
+  /* Topo estreito: só a marca. Quem está logado aparece no menu da conta */
+  .topo-app__sessao {
+    display: none;
+  }
+}

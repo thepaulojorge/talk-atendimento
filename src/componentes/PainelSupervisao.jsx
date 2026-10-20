@@ -20,7 +20,7 @@ import Icone from "./Icone.jsx";
 const FILTROS_INICIAIS = { atendente: "", acao: "", periodo: "tudo", estacao: "", turno: "", busca: "" };
 
 /* Painel de supervisão: mensagens editadas e apagadas e conversas excluídas.
-   Ocupa o lugar das conversas (quem decide é o App, pelo estado.tela) */
+   Ocupa o lugar das conversas (quem decide é o App, pela estado.secao) */
 export default function PainelSupervisao() {
   const { estado, despachar } = useEstado();
 
@@ -29,13 +29,13 @@ export default function PainelSupervisao() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const mudarFiltro = (chave, valor) => setFiltros((atuais) => ({ ...atuais, [chave]: valor }));
 
-  const fechar = () => despachar({ tipo: "fecharSupervisao" });
+  const fechar = () => despachar({ tipo: "irPara", secao: "conversas" });
 
   // Esc volta às conversas (o painel não tem nada "por cima" para fechar antes)
   useEffect(() => {
     function aoApertarTecla(evento) {
       if (evento.key === "Escape" && !document.activeElement?.matches("input, select")) {
-        despachar({ tipo: "fecharSupervisao" });
+        despachar({ tipo: "irPara", secao: "conversas" });
       }
     }
     document.addEventListener("keydown", aoApertarTecla);

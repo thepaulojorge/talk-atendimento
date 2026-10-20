@@ -7,16 +7,7 @@ import ItemConversa from "./ItemConversa.jsx";
 import CartaoPrevia from "./CartaoPrevia.jsx";
 import MenuFlutuante from "./MenuFlutuante.jsx";
 import Icone from "./Icone.jsx";
-
-// Os filtros viram DADOS: os botões são desenhados com um .map()
-const FILTROS = [
-  { id: "todas", nome: "Todas" },
-  { id: "nao-lidas", nome: "Não lidas" },
-  { id: "minhas", nome: "Minhas" },
-  { id: "fila", nome: "Na fila" },
-  { id: "resolvidas", nome: "Resolvidas" },
-  { id: "grupos", nome: "Grupos" },
-];
+import FiltrosConversas from "./FiltrosConversas.jsx";
 
 const ATRASO_CARTAO_MS = 450; // passar o mouse "de passagem" não abre o cartão
 // Celular não tem "passar o mouse". O ?. protege ambientes sem matchMedia
@@ -33,7 +24,6 @@ export default function PainelConversas({
   setEtiqueta,
   vendoArquivadas,
   setVendoArquivadas,
-  aoAbrirContatos,
 }) {
   const { estado } = useEstado();
   const total = contarTotalNaoLidas(estado.conversas);
@@ -115,9 +105,6 @@ export default function PainelConversas({
             </span>
           )}
         </h2>
-        <button type="button" id="botao-abrir-contatos" aria-label="Abrir contatos" onClick={aoAbrirContatos}>
-          <Icone nome="contatos" /> Contatos
-        </button>
       </div>
 
       <div className="busca">
@@ -138,37 +125,7 @@ export default function PainelConversas({
         />
       </div>
 
-      <nav className="filtros" aria-label="Filtrar conversas">
-        {FILTROS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            className={`filtro${filtro === f.id ? " ativo" : ""}`}
-            aria-pressed={filtro === f.id}
-            onClick={() => setFiltro(f.id)}
-          >
-            {f.nome}
-          </button>
-        ))}
-
-        <label htmlFor="filtro-etiqueta" className="visualmente-oculto">
-          Filtrar por etiqueta
-        </label>
-        {/* <select> controlado: o "value" vem do estado, igual ao <input> */}
-        <select
-          id="filtro-etiqueta"
-          className={`filtro filtro--select${etiqueta ? " ativo" : ""}`}
-          value={etiqueta}
-          onChange={(evento) => setEtiqueta(evento.target.value)}
-        >
-          <option value="">Etiqueta ▾</option>
-          {estado.etiquetas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </select>
-      </nav>
+      <FiltrosConversas filtro={filtro} setFiltro={setFiltro} etiqueta={etiqueta} setEtiqueta={setEtiqueta} />
 
       <ul className="lista-conversas" onScroll={aoRolarLista} onMouseDown={esconderPrevia}>
         {/* Topo da lista: o cabeçalho de quem está nas arquivadas, ou o atalho para elas */}

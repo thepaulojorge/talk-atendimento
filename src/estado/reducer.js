@@ -35,7 +35,10 @@ export const estadoInicial = {
   rascunhos: {}, // texto não enviado de cada conversa: { c1: "Olá...", c3: "..." }
   aviso: null, // o aviso flutuante: { id, texto } ou null
   painelDadosAberto: false, // a coluna da direita, com os dados do contato
-  tela: "conversas", // "conversas" ou "supervisao" (o painel ocupa o lugar das conversas)
+  /* A seção escolhida na barra de ícones:
+     "conversas" | "contatos" (as duas na coluna da esquerda)
+     "supervisao" (o painel ocupa o lugar das conversas) */
+  secao: "conversas",
   mensagemEmFoco: null, // id da mensagem a destacar ao abrir a conversa (vindo da supervisão)
 };
 
@@ -129,7 +132,7 @@ export function reducer(estado, acao) {
 
     // Volta tudo ao exemplo: fecha a conversa e esquece os rascunhos
     case "dadosRestaurados":
-      return { ...estado, ...acao.dados, conversaAbertaId: null, painelDadosAberto: false };
+      return { ...estado, ...acao.dados, conversaAbertaId: null, painelDadosAberto: false, secao: "conversas" };
 
     case "erroAoCarregar":
       return { ...estado, carregando: false, erro: acao.mensagem };
@@ -182,7 +185,8 @@ export function reducer(estado, acao) {
 
       /* Reaproveita a ação "abrirConversa" chamando o próprio reducer:
          assim a regra "abrir = marcar como lida" fica num lugar só */
-      return reducer({ ...estado, contatos, conversas }, { tipo: "abrirConversa", id });
+      // Iniciou pelos Contatos: a coluna da esquerda volta para as conversas
+      return reducer({ ...estado, contatos, conversas, secao: "conversas" }, { tipo: "abrirConversa", id });
     }
 
     case "fecharConversa":
@@ -523,23 +527,22 @@ export function reducer(estado, acao) {
         atendenteLogadoId: null,
         conversaAbertaId: null,
         painelDadosAberto: false,
-        tela: "conversas",
+        secao: "conversas",
       };
 
     /* ---------- Supervisão ---------- */
 
-    // Só supervisão e diretoria entram (o botão já some para os outros)
-    case "abrirSupervisao":
-      return podeVerAuditoria(estado) ? { ...estado, tela: "supervisao" } : estado;
-
-    case "fecharSupervisao":
-      return { ...estado, tela: "conversas" };
+    /* Trocar de seção pela barra de ícones: { secao }
+       Supervisão: só para supervisão e diretoria (o ícone já some para os outros) */
+    case "irPara":
+      if (acao.secao === "supervisao" && !podeVerAuditoria(estado)) return estado;
+      return { ...estado, secao: acao.secao };
 
     /* Clicou no nome da conversa num registro: volta para as conversas,
        abre a conversa e destaca a mensagem editada ou apagada.
        { conversaId, mensagemId? } */
     case "verNaConversa": {
-      const aberta = reducer({ ...estado, tela: "conversas" }, { tipo: "abrirConversa", id: acao.conversaId });
+      const aberta = reducer({ ...estado, secao: "conversas" }, { tipo: "abrirConversa", id: acao.conversaId });
       return { ...aberta, mensagemEmFoco: acao.mensagemId || null };
     }
 
