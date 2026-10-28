@@ -7,6 +7,7 @@ import Chat from "./componentes/Chat.jsx";
 import PainelDados from "./componentes/PainelDados.jsx";
 import Aviso from "./componentes/Aviso.jsx";
 import TelaLogin from "./componentes/TelaLogin.jsx";
+import TelaCarregando from "./componentes/TelaCarregando.jsx";
 import PainelSupervisao from "./componentes/PainelSupervisao.jsx";
 import MenuLateral from "./componentes/MenuLateral.jsx";
 
@@ -28,7 +29,7 @@ export default function App() {
 
   /* Carregando: ainda não sabemos se alguém já estava logado neste
      navegador. Mostrar o login agora faria a tela "piscar" para quem estava */
-  if (estado.carregando) return <p className="aviso-carregamento">Carregando…</p>;
+  if (estado.carregando) return <TelaCarregando />;
 
   if (estado.erro) {
     return (
