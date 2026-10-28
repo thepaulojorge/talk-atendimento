@@ -1,33 +1,56 @@
-/* A ÚNICA parte do front que sabe ONDE está o servidor.
-   Os componentes não chamam fetch direto: pedem para cá. Quando o endereço
-   mudar (do seu PC para o Render), só este arquivo e o .env mudam.
+/* A ÚNICA parte do front que conversa com o servidor.
+   Os componentes não chamam fetch direto: pedem para cá.
 
    VITE_API_URL vem dos arquivos .env do Vite:
    - .env.development (npm run dev): http://localhost:3000, a API no seu PC
-   - no build do GitHub Pages ainda não existe: o site continua lendo o
-     public/dados.json até a API ser publicada (etapa B6)
+   - .env.production (o site no GitHub Pages): a API publicada no Render
    Só variáveis que começam com VITE_ chegam ao navegador. De propósito:
    assim um segredo do .env nunca vaza para o site sem querer */
 export const API_URL = import.meta.env.VITE_API_URL || "";
 
-/* Busca os dados iniciais (atendentes, conversas, contatos...).
-   Devolve o objeto, ou LANÇA um erro com uma mensagem que a pessoa entende */
-export async function buscarDados() {
-  const url = API_URL ? `${API_URL}/api/dados` : `${import.meta.env.BASE_URL}dados.json`;
+/* Um pedido à API, com tudo o que se repete num lugar só:
+   - o endereço completo
+   - o corpo em JSON (nos pedidos que mandam dados)
+   - o token de login ("Authorization: Bearer ..."), nas rotas protegidas
+   - erros com uma mensagem que a pessoa entende
+   Devolve a resposta já convertida de JSON, ou LANÇA um erro com
+   .status (401, 403...) para quem chamou poder decidir o que fazer */
+async function pedir(caminho, { metodo = "GET", corpo, token } = {}) {
+  if (!API_URL) throw new Error("O endereço da API (VITE_API_URL) não está configurado.");
+
+  const cabecalhos = {};
+  if (corpo) cabecalhos["Content-Type"] = "application/json";
+  if (token) cabecalhos.Authorization = `Bearer ${token}`;
 
   let resposta;
   try {
-    resposta = await fetch(url);
+    resposta = await fetch(`${API_URL}/api${caminho}`, {
+      method: metodo,
+      headers: cabecalhos,
+      body: corpo ? JSON.stringify(corpo) : undefined,
+    });
   } catch {
     // fetch só "quebra" assim quando nem chegou ao servidor (desligado, sem internet)
-    throw new Error(
-      API_URL
-        ? `Não foi possível falar com o servidor em ${API_URL}. Ele está ligado? (npm run dev na pasta talk-atendimento-api)`
-        : "Não foi possível carregar as conversas. Verifique a sua conexão."
-    );
+    const dica = API_URL.includes("localhost") ? " Ele está ligado? (npm run dev na pasta talk-atendimento-api)" : "";
+    throw new Error(`Não foi possível falar com o servidor.${dica}`);
   }
 
-  // Chegou ao servidor, mas a resposta é de erro (404, 500...)
-  if (!resposta.ok) throw new Error(`O servidor respondeu com erro ${resposta.status}.`);
-  return resposta.json();
+  // A API sempre responde em JSON, inclusive os erros: { erro: "..." }
+  const conteudo = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    const erro = new Error(conteudo.erro || `O servidor respondeu com erro ${resposta.status}.`);
+    erro.status = resposta.status;
+    throw erro;
+  }
+  return conteudo;
 }
+
+// Pública (sem login): o nome da empresa e se o modo demonstração está ligado
+export const buscarConfiguracaoPublica = () => pedir("/publico/configuracao");
+
+// Login: devolvem { token, sessao }
+export const entrar = (email, senha) => pedir("/auth/entrar", { metodo: "POST", corpo: { email, senha } });
+export const entrarDemonstracao = () => pedir("/auth/demonstracao", { metodo: "POST" });
+
+// Protegida: precisa do token
+export const buscarDados = (token) => pedir("/dados", { token });

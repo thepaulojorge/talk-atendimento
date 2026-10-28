@@ -29,6 +29,7 @@ export const estadoInicial = {
   respostasRapidas: [],
   auditoria: [],
   estacoes: [], // as estações de atendimento e a escala de turnos de cada uma
+  modoDemonstracao: false, // o servidor aceita o "Entrar na demonstração"?
   sessao: null, // quem entrou: { email, atendenteId, estacaoId?, turnoId?, desde }
   atendenteLogadoId: null, // a PESSOA por trás da sessão (null = tela de login)
   conversaAbertaId: null,
@@ -133,6 +134,10 @@ export function reducer(estado, acao) {
     // Volta tudo ao exemplo: fecha a conversa e esquece os rascunhos
     case "dadosRestaurados":
       return { ...estado, ...acao.dados, conversaAbertaId: null, painelDadosAberto: false, secao: "conversas" };
+
+    // Ninguém logado: a tela de login já pode aparecer, com o nome da empresa
+    case "prontoParaLogin":
+      return { ...estado, carregando: false, marca: acao.marca, modoDemonstracao: acao.modoDemonstracao };
 
     case "erroAoCarregar":
       return { ...estado, carregando: false, erro: acao.mensagem };
@@ -515,19 +520,15 @@ export function reducer(estado, acao) {
 
     /* ---------- Login ---------- */
 
-    // { sessao } (a tela de login já conferiu e-mail, senha e escala)
-    case "entrar":
-      return { ...estado, sessao: acao.sessao, atendenteLogadoId: acao.sessao.atendenteId };
-
-    // Sair: volta para a tela de login, sem nada aberto
+    /* Sair: volta para a tela de login e as conversas SAEM DA MEMÓRIA.
+       A próxima pessoa no computador não deve ver nada de quem saiu.
+       Ficam só o nome da empresa e o modo demonstração (são públicos) */
     case "sair":
       return {
-        ...estado,
-        sessao: null,
-        atendenteLogadoId: null,
-        conversaAbertaId: null,
-        painelDadosAberto: false,
-        secao: "conversas",
+        ...estadoInicial,
+        carregando: false,
+        marca: estado.marca,
+        modoDemonstracao: estado.modoDemonstracao,
       };
 
     /* ---------- Supervisão ---------- */

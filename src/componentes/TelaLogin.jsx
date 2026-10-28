@@ -1,61 +1,37 @@
 import { useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
-import { avisar } from "../estado/avisos.js";
-import { CONTAS, CONTA_DEMONSTRACAO } from "../estado/contas.js";
-import { MODO_DEMONSTRACAO } from "../configuracao.js";
-import { buscarPorId } from "../utilidades/conversas.js";
-import { turnoDe } from "../utilidades/turnos.js";
+import { entrar, entrarDemonstracao } from "../api.js";
 import Icone from "./Icone.jsx";
 
 /* Tela de login: e-mail e senha, sem nenhum usuário listado na tela.
-
-   ⚠️ Sem backend, a conferência acontece aqui no navegador, contra a lista
-   de contas de demonstração (estado/contas.js). Serve para mostrar o FLUXO.
-   Com o backend, este componente só envia e-mail e senha para o servidor */
+   Quem confere é o SERVIDOR: este componente só envia o que foi digitado
+   e mostra a resposta. A senha nunca fica guardada no navegador */
 export default function TelaLogin() {
-  const { estado, despachar } = useEstado();
+  const { estado, entrarComResposta } = useEstado();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  // Enquanto espera o servidor: botões desligados e "Entrando…"
+  const [enviando, setEnviando] = useState(false);
 
-  /* Descobre QUEM entra com esta conta.
-     Devolve { sessao } quando dá certo, ou { erro } explicando o problema */
-  function resolverConta(conta) {
-    const agora = new Date();
-
-    if (conta.tipo === "pessoal") {
-      return { sessao: { email: conta.email, atendenteId: conta.atendenteId, desde: agora.toISOString() } };
+  /* "pedirLogin" é a função da API a chamar (entrar ou entrarDemonstracao).
+     try/finally: dando certo ou errado, o botão volta ao normal no fim */
+  async function tentar(pedirLogin) {
+    setErro("");
+    setEnviando(true);
+    try {
+      const resposta = await pedirLogin();
+      await entrarComResposta(resposta); // carrega as conversas e abre o app
+    } catch (problema) {
+      // A mensagem vem do servidor ("E-mail ou senha incorretos.", "Muitas tentativas...")
+      setErro(problema.message);
+      setEnviando(false); // só aqui: se deu certo, esta tela já saiu de cena
     }
-
-    // Estação: quem está nela depende do horário. A escala diz quem cobre o turno
-    const estacao = buscarPorId(estado.estacoes, conta.estacaoId);
-    const turno = turnoDe(agora);
-    const atendenteId = estacao?.escala?.[turno.id];
-    if (!buscarPorId(estado.atendentes, atendenteId)) {
-      return { erro: `Ninguém está escalado na ${estacao?.nome || "estação"} no turno da ${turno.nome.toLowerCase()}. Fale com a diretoria.` };
-    }
-    return {
-      sessao: { email: conta.email, atendenteId, estacaoId: estacao.id, turnoId: turno.id, desde: agora.toISOString() },
-    };
-  }
-
-  function entrarCom(conta) {
-    const { sessao, erro: problema } = resolverConta(conta);
-    if (problema) return setErro(problema);
-
-    despachar({ tipo: "entrar", sessao });
-    const nome = buscarPorId(estado.atendentes, sessao.atendenteId)?.nome;
-    avisar(despachar, `Olá, ${nome}! Bom atendimento.`);
   }
 
   function aoEnviar(evento) {
     evento.preventDefault();
-    // E-mail sem diferença de maiúsculas e sem espaços sobrando
-    const conta = CONTAS.find((c) => c.email === email.trim().toLowerCase() && c.senha === senha);
-    /* Mensagem de erro GENÉRICA de propósito: dizer "esse e-mail não existe"
-       ajudaria alguém a descobrir quais e-mails existem */
-    if (!conta) return setErro("E-mail ou senha incorretos.");
-    entrarCom(conta);
+    tentar(() => entrar(email, senha));
   }
 
   return (
@@ -104,21 +80,17 @@ export default function TelaLogin() {
           </p>
         )}
 
-        {/* Enquanto o dados.json carrega, a escala ainda não existe */}
-        <button type="submit" className="login__entrar" disabled={estado.carregando}>
-          Entrar
+        <button type="submit" className="login__entrar" disabled={enviando}>
+          {enviando ? "Entrando…" : "Entrar"}
         </button>
 
-        {MODO_DEMONSTRACAO && (
+        {/* Quem diz se o modo demonstração existe é o servidor */}
+        {estado.modoDemonstracao && (
           <div className="login__demo">
-            <button
-              type="button"
-              disabled={estado.carregando}
-              onClick={() => entrarCom(CONTAS.find((c) => c.email === CONTA_DEMONSTRACAO))}
-            >
+            <button type="button" disabled={enviando} onClick={() => tentar(entrarDemonstracao)}>
               Entrar na demonstração
             </button>
-            <p>Versão de demonstração: as conversas são fictícias e ficam só neste navegador.</p>
+            <p>Versão de demonstração: as conversas são fictícias.</p>
           </div>
         )}
       </form>

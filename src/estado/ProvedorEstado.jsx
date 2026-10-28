@@ -13,7 +13,7 @@ import {
 } from "./armazenamento.js";
 import { trazerDatasParaPerto } from "../utilidades/datas.js";
 import { MARCA_PADRAO } from "../configuracao.js";
-import { buscarDados } from "../api.js";
+import { buscarConfiguracaoPublica, buscarDados } from "../api.js";
 
 const ATRASO_SALVAR_MS = 300;
 
@@ -31,7 +31,7 @@ function dadosDeExemplo(original) {
     respostasRapidas: dados.respostasRapidas || [],
     auditoria: dados.auditoria || [],
     rascunhos: {},
-    marca: MARCA_PADRAO,
+    marca: dados.marca || MARCA_PADRAO,
     estacoes: dados.estacoes || [],
   };
 }
@@ -51,41 +51,73 @@ export default function ProvedorEstado({ children }) {
   const pularSalvamento = useRef(false);
   const avisouFalha = useRef(false);
 
-  /* ---------- Carregar (uma vez, ao abrir o app) ---------- */
+  /* ---------- Carregar as conversas (depois do login) ----------
+     sessao = { token, email, atendenteId, estacaoId, turnoId, desde }
+     useCallback: a mesma função entre renderizações (ela vai no Context) */
+  const carregarComSessao = useCallback(async (sessao) => {
+    // O token vai junto: sem ele, a API responde 401 ("faça login")
+    const dados = await buscarDados(sessao.token);
+
+    original.current = dados;
+    const salvos = lerSalvos(sessao.atendenteId); // a cópia DESTA pessoa
+    pularSalvamento.current = true;
+    despachar({
+      tipo: "dadosCarregados",
+      dados: {
+        // Tem algo salvo neste navegador? Junta com o que veio da API
+        ...(salvos ? juntarComSalvos(dados, salvos) : dadosDeExemplo(dados)),
+        sessao,
+        atendenteLogadoId: sessao.atendenteId,
+      },
+    });
+  }, []);
+
+  /* A tela de login chama esta função com a resposta do servidor
+     ({ token, sessao }). O token passa a morar DENTRO da sessão */
+  const entrarComResposta = useCallback(
+    async ({ token, sessao }) => {
+      await carregarComSessao({ ...sessao, token });
+      const nome = original.current.atendentes.find((a) => a.id === sessao.atendenteId)?.nome;
+      avisar(despachar, `Olá, ${nome}! Bom atendimento.`);
+    },
+    [carregarComSessao]
+  );
+
+  /* ---------- Ao abrir o app (uma vez) ----------
+     1. Busca o nome da empresa (público), para a tela de login
+     2. Já tinha alguém logado neste navegador? Tenta carregar com o token
+        guardado. Se o servidor recusar (token vencido), volta para o login */
   useEffect(() => {
     let cancelado = false;
 
-    async function carregar() {
+    async function iniciar() {
       try {
-        // Da API (em casa) ou do dados.json (no GitHub Pages, por enquanto)
-        const dados = await buscarDados();
+        const publico = await buscarConfiguracaoPublica();
         if (cancelado) return;
 
-        original.current = dados;
-        const salvos = lerSalvos();
-
-        // Já tinha alguém logado neste navegador? Continua logado
-        // (desde que essa pessoa ainda exista no dados.json)
         const sessao = lerSessao();
-        const sessaoValida = sessao && dados.atendentes.some((a) => a.id === sessao.atendenteId);
+        if (sessao) {
+          try {
+            await carregarComSessao(sessao);
+            return; // entrou direto, sem passar pelo login
+          } catch (erro) {
+            // 401: token vencido ou inválido. Qualquer outro erro: problema de verdade
+            if (erro.status !== 401) throw erro;
+            if (!cancelado) avisar(despachar, erro.message); // "Sua sessão expirou. Entre de novo."
+          }
+        }
 
-        pularSalvamento.current = true;
-        despachar({
-          tipo: "dadosCarregados",
-          dados: {
-            // Tem algo salvo? Junta com o dados.json. Não tem? Usa o exemplo
-            ...(salvos ? juntarComSalvos(dados, salvos) : dadosDeExemplo(dados)),
-            ...(sessaoValida && { sessao, atendenteLogadoId: sessao.atendenteId }),
-          },
-        });
+        if (!cancelado) {
+          despachar({ tipo: "prontoParaLogin", marca: publico.marca, modoDemonstracao: publico.modoDemonstracao });
+        }
       } catch (erro) {
-        console.error("Falha ao carregar os dados:", erro);
+        console.error("Falha ao iniciar:", erro);
         // A mensagem vem pronta do api.js, explicando o que aconteceu
         if (!cancelado) despachar({ tipo: "erroAoCarregar", mensagem: erro.message });
       }
     }
 
-    carregar();
+    iniciar();
 
     /* "Limpeza": se o componente sair da tela antes do fetch terminar,
        não despachamos nada. (O StrictMode faz isso de propósito em
@@ -93,7 +125,7 @@ export default function ProvedorEstado({ children }) {
     return () => {
       cancelado = true;
     };
-  }, []);
+  }, [carregarComSessao]);
 
   /* ---------- Salvar (a cada mudança, com "debounce") ----------
      Várias mudanças seguidas (abrir conversa + marcar como lida...) viram
@@ -103,21 +135,26 @@ export default function ProvedorEstado({ children }) {
      Um efeito é o lugar certo aqui: o localStorage é um sistema DE FORA
      do React, e o efeito mantém os dois sincronizados */
   const pacotePendente = useRef(null);
-  const { carregando, conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes, sessao } = estado;
+  const { carregando, conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes, sessao, atendenteLogadoId } =
+    estado;
 
   useEffect(() => {
-    if (carregando) return;
+    /* Só salva com alguém LOGADO. Na tela de login o estado está vazio
+       (as conversas só chegam depois de entrar): salvar ali gravaria uma
+       cópia vazia por cima das conversas guardadas */
+    if (carregando || !atendenteLogadoId) return;
     if (pularSalvamento.current) {
       pularSalvamento.current = false;
       return;
     }
 
     const pacote = montarPacote({ conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes });
-    pacotePendente.current = pacote;
+    // O dono vai junto: o salvamento do "pagehide" precisa saber de quem é
+    pacotePendente.current = { pacote, dono: atendenteLogadoId };
 
     const temporizador = setTimeout(() => {
       pacotePendente.current = null;
-      if (salvar(pacote)) {
+      if (salvar(pacote, atendenteLogadoId)) {
         avisouFalha.current = false;
       } else if (!avisouFalha.current) {
         // Avisa uma vez só, para não incomodar a cada letra digitada
@@ -127,7 +164,7 @@ export default function ProvedorEstado({ children }) {
     }, ATRASO_SALVAR_MS);
 
     return () => clearTimeout(temporizador);
-  }, [carregando, conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes]);
+  }, [carregando, atendenteLogadoId, conversas, contatos, etiquetas, auditoria, rascunhos, marca, estacoes]);
 
   /* A sessão é salva na hora (sem debounce): entrar e sair são raros.
      Esperamos o carregamento: antes dele, a sessão do estado ainda é null,
@@ -139,7 +176,8 @@ export default function ProvedorEstado({ children }) {
   // Fechou ou recarregou a aba antes dos 300ms? Salva na hora o que estava pendente
   useEffect(() => {
     function aoSair() {
-      if (pacotePendente.current) salvar(pacotePendente.current);
+      const pendente = pacotePendente.current;
+      if (pendente) salvar(pendente.pacote, pendente.dono);
     }
     window.addEventListener("pagehide", aoSair);
     return () => window.removeEventListener("pagehide", aoSair);
@@ -148,14 +186,14 @@ export default function ProvedorEstado({ children }) {
   /* ---------- Restaurar os dados de exemplo ---------- */
   const restaurarExemplo = useCallback(() => {
     if (!original.current) return;
-    apagarSalvos();
+    apagarSalvos(atendenteLogadoId); // só a cópia de quem está logado
     pacotePendente.current = null;
     pularSalvamento.current = true; // o exemplo não precisa ser salvo
     despachar({ tipo: "dadosRestaurados", dados: dadosDeExemplo(original.current) });
     avisar(despachar, "Dados de exemplo restaurados");
-  }, []);
+  }, [atendenteLogadoId]);
 
   return (
-    <ContextoEstado.Provider value={{ estado, despachar, restaurarExemplo }}>{children}</ContextoEstado.Provider>
+    <ContextoEstado.Provider value={{ estado, despachar, restaurarExemplo, entrarComResposta }}>{children}</ContextoEstado.Provider>
   );
 }

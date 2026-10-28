@@ -7,8 +7,11 @@
 
 import { MARCA_PADRAO } from "../configuracao.js";
 
-// Nome novo: a versão 1 (clonewpp) usa "espelho-dados" no mesmo domínio
-const CHAVE_DADOS = "talk-dados";
+/* UMA CÓPIA POR PESSOA: "talk-dados-at1", "talk-dados-at4"...
+   O servidor manda dados diferentes para cada papel (a supervisão vê o
+   que foi apagado; o atendente, não). Se a cópia fosse uma só, a versão
+   "limpa" do atendente ficaria por cima dos dados da supervisão */
+const chaveDados = (dono) => `talk-dados-${dono}`;
 /* A sessão (quem está logado) fica numa chave SEPARADA: "Restaurar dados
    de exemplo" apaga os dados, mas não tira ninguém do sistema */
 const CHAVE_SESSAO = "talk-sessao";
@@ -35,18 +38,18 @@ export function montarPacote(estado) {
 
 /* try/catch em tudo: em aba anônima ou com o armazenamento bloqueado,
    o localStorage dá erro. O app continua funcionando, só não lembra */
-export function salvar(pacote) {
+export function salvar(pacote, dono) {
   try {
-    localStorage.setItem(CHAVE_DADOS, JSON.stringify(pacote));
+    localStorage.setItem(chaveDados(dono), JSON.stringify(pacote));
     return true;
   } catch {
     return false; // aba anônima, ou espaço cheio (uns 5 MB por site; áudio ocupa bastante)
   }
 }
 
-export function lerSalvos() {
+export function lerSalvos(dono) {
   try {
-    const texto = localStorage.getItem(CHAVE_DADOS);
+    const texto = localStorage.getItem(chaveDados(dono));
     if (!texto) return null; // primeira visita
     const salvos = JSON.parse(texto);
     // Só aceita dados no formato que este código entende
@@ -57,9 +60,9 @@ export function lerSalvos() {
   }
 }
 
-export function apagarSalvos() {
+export function apagarSalvos(dono) {
   try {
-    localStorage.removeItem(CHAVE_DADOS);
+    localStorage.removeItem(chaveDados(dono));
   } catch {
     // armazenamento bloqueado: não havia nada salvo mesmo
   }
@@ -86,14 +89,21 @@ export function juntarComSalvos(dados, salvos) {
     etiquetas,
     auditoria: Array.isArray(salvos.auditoria) ? salvos.auditoria : [],
     rascunhos: salvos.rascunhos || {},
-    marca: salvos.marca || MARCA_PADRAO,
+    marca: salvos.marca || dados.marca || MARCA_PADRAO,
     // Dados salvos ANTES da escala existir não têm "estacoes": usa a do dados.json
     estacoes: salvos.estacoes || dados.estacoes || [],
   };
 }
 
 /* ---------- Sessão ----------
-   sessao = { email, atendenteId, estacaoId?, turnoId?, desde } */
+   sessao = { token, email, atendenteId, estacaoId?, turnoId?, desde }
+   O token é o "crachá" que o servidor entregou no login.
+
+   ⚠️ Por que no localStorage, e não num cookie? O mais seguro seria um
+   cookie "httpOnly" (que o JavaScript nem consegue ler). Mas o site
+   (github.io) e a API (onrender.com) são domínios diferentes, e os
+   navegadores estão bloqueando cookies entre domínios. Com o site e a
+   API no mesmo domínio (um domínio próprio da empresa), vale trocar */
 export function salvarSessao(sessao) {
   try {
     if (sessao) localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
@@ -106,7 +116,8 @@ export function salvarSessao(sessao) {
 export function lerSessao() {
   try {
     const sessao = JSON.parse(localStorage.getItem(CHAVE_SESSAO));
-    return sessao?.atendenteId ? sessao : null;
+    // Sessões antigas (de antes do login no servidor) não têm token: ignora
+    return sessao?.token && sessao?.atendenteId ? sessao : null;
   } catch {
     return null;
   }

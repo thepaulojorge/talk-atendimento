@@ -17,8 +17,3 @@ export const TURNOS = [
   { id: "tarde", nome: "Tarde", inicio: 14, fim: 22 },
   { id: "noite", nome: "Noite", inicio: 22, fim: 6 },
 ];
-
-/* Modo demonstração (portfólio): mostra o botão "Entrar na demonstração"
-   na tela de login, para quem visita o site conseguir entrar sem senha.
-   Com o backend e os logins de verdade, mude para false */
-export const MODO_DEMONSTRACAO = true;
