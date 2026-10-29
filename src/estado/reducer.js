@@ -14,9 +14,9 @@
       resultado. Por isso nada de Date.now() ou new Date() aqui dentro:
       ids e horários são criados ANTES, no componente, e vêm na ação. */
 import { MARCA_PADRAO, LIMITE_FIXADAS } from "../configuracao.js";
-import { buscarPorId, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
+import { buscarPorId, conteudoParaRegistro, estaResolvida, nomeDaConversa } from "../utilidades/conversas.js";
 import { podeApagarMensagem, podeEditarMensagem, podeVerAuditoria } from "../utilidades/permissoes.js";
-import { formatarDuracao, normalizar } from "../utilidades/texto.js";
+import { normalizar } from "../utilidades/texto.js";
 
 export const estadoInicial = {
   carregando: true,
@@ -70,7 +70,7 @@ function registroDeAuditoria(estado, acao, conversa, msg, extra) {
     ...deOndeVeio(estado),
     quando: acao.agora,
     tipoMensagem: msg.tipo,
-    antes: msg.tipo === "audio" ? `🎤 Áudio de ${formatarDuracao(msg.duracao)}` : msg.texto,
+    antes: conteudoParaRegistro(msg),
     ...extra, // tipo ("edicao" ou "exclusao") e, na edição, o "depois"
   };
 }
@@ -273,7 +273,7 @@ export function reducer(estado, acao) {
           quem: quemEscreveu(m, conversa, estado),
           quando: m.horario,
           texto:
-            (m.tipo === "audio" ? `🎤 Áudio de ${formatarDuracao(m.duracao)}` : m.texto) +
+            conteudoParaRegistro(m) +
             (m.apagada ? " (já estava apagada)" : ""),
         }));
 
@@ -330,8 +330,8 @@ export function reducer(estado, acao) {
         }
 
         /* acao.conteudo traz o que muda entre os tipos:
-           { tipo: "texto", texto }, { tipo: "audio", audioUrl, duracao }
-           ou { tipo: "nota", texto } */
+           { tipo: "texto", texto }, { tipo: "nota", texto },
+           { tipo: "audio", arquivo, duracao } ou { tipo: "arquivo", arquivo } */
         const novaMensagem = ehNota
           ? {
               id: acao.id,

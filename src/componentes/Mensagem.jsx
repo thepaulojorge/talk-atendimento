@@ -1,13 +1,13 @@
 import { useEstado } from "../estado/useEstado.js";
 import { useMenuDeContexto } from "../hooks/useMenuDeContexto.js";
-import { buscarPorId, nomeDoAutor, resumoDaMensagem } from "../utilidades/conversas.js";
+import { buscarPorId, conteudoParaRegistro, nomeDoAutor, resumoDaMensagem } from "../utilidades/conversas.js";
 import { formatarHoraMensagem } from "../utilidades/datas.js";
 import { podeVerAuditoria } from "../utilidades/permissoes.js";
-import { formatarDuracao } from "../utilidades/texto.js";
 import Icone from "./Icone.jsx";
 import BalaoAudio from "./BalaoAudio.jsx";
+import BalaoArquivo from "./BalaoArquivo.jsx";
 
-/* Um balão de mensagem: texto, áudio, nota interna ou apagada.
+/* Um balão de mensagem: texto, áudio, arquivo, nota interna ou apagada.
    Props:
    - msg, conversa: os dados
    - destacada: true quando alguém clicou numa citação desta mensagem
@@ -38,7 +38,7 @@ export default function Mensagem({ msg, conversa, destacada, selecionada, aoResp
       msg.apagadaPor === estado.atendenteLogadoId
         ? "Você apagou esta mensagem"
         : `Mensagem apagada por ${buscarPorId(estado.atendentes, msg.apagadaPor)?.nome || "Equipe"}`;
-    const conteudoOriginal = msg.tipo === "audio" ? `🎤 Áudio de ${formatarDuracao(msg.duracao)}` : msg.texto;
+    const conteudoOriginal = conteudoParaRegistro(msg);
 
     return (
       <div className={`${classeBase} mensagem--apagada${msg.tipo === "nota" ? " mensagem--nota" : ""}`} data-id={msg.id} {...eventosMenu}>
@@ -93,11 +93,9 @@ export default function Mensagem({ msg, conversa, destacada, selecionada, aoResp
         <Citacao autor={nomeDoAutor(original, conversa, estado)} texto={resumoDaMensagem(original)} aoClicar={() => aoIrPara(original.id)} />
       )}
 
-      {msg.tipo === "audio" ? (
-        <BalaoAudio msg={msg} />
-      ) : (
-        <div className="mensagem__texto">{msg.texto}</div>
-      )}
+      {msg.tipo === "audio" && <BalaoAudio msg={msg} />}
+      {msg.tipo === "arquivo" && <BalaoArquivo arquivo={msg.arquivo} />}
+      {msg.tipo !== "audio" && msg.tipo !== "arquivo" && <div className="mensagem__texto">{msg.texto}</div>}
 
       <Rodape msg={msg} supervisao={supervisao} />
     </div>

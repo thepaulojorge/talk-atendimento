@@ -31,10 +31,11 @@ export function podeApagarMensagem(estado, msg) {
   return !msg.apagada && msg.autor === estado.atendenteLogadoId && (msg.direcao === "enviada" || msg.tipo === "nota");
 }
 
-/* Encaminhar: texto e áudio, de qualquer pessoa.
+/* Encaminhar: texto, áudio e arquivo, de qualquer pessoa.
    Nota interna NUNCA: ela é da equipe e iria parar no cliente */
 export function podeEncaminhar(msg) {
-  return !msg.apagada && (msg.tipo === "texto" || msg.tipo === "audio");
+  // Áudio e arquivo só com o arquivo de verdade (os áudios de exemplo não têm)
+  return !msg.apagada && (msg.tipo === "texto" || ((msg.tipo === "audio" || msg.tipo === "arquivo") && Boolean(msg.arquivo)));
 }
 
 // Configurações (nome da empresa, escala de turnos): só a diretoria

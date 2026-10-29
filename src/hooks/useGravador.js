@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /* Hook próprio: tudo o que envolve gravar áudio, num lugar só.
      const gravador = useGravador();
      await gravador.iniciar();             // pede o microfone e começa
-     const audio = await gravador.parar(true); // { audioUrl, duracao } ou null
+     const audio = await gravador.parar(true); // { blob, duracao } ou null
 
    ⚠️ O navegador só libera o microfone em localhost ou HTTPS.
    O "npm run dev" (localhost) e o GitHub Pages (HTTPS) atendem às duas. */
@@ -77,14 +77,11 @@ export function useGravador() {
           if (!enviar) return resolver(null);
           if (duracao < 1) return resolver({ curto: true });
 
-          /* Junta os pedaços num arquivo e converte em TEXTO (data URL).
-             Texto pode ser salvo junto com as conversas; um endereço
-             temporário (blob:) morreria ao recarregar a página */
-          const arquivo = new Blob(r.pedacos, { type: r.recorder.mimeType });
-          const leitor = new FileReader();
-          leitor.addEventListener("load", () => resolver({ audioUrl: leitor.result, duracao }));
-          leitor.addEventListener("error", () => resolver({ erro: true }));
-          leitor.readAsDataURL(arquivo);
+          /* Junta os pedaços num arquivo (Blob). Quem chamou envia esse
+             arquivo para o servidor, como qualquer outro anexo.
+             (Antes, ele virava texto e ia dentro da mensagem: pesado demais) */
+          const blob = new Blob(r.pedacos, { type: r.recorder.mimeType });
+          resolver({ blob, duracao });
         },
         { once: true }
       );

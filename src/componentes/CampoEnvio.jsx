@@ -1,7 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
 import { novoId } from "../utilidades/ids.js";
+import { enviarArquivo } from "../api.js";
+import {
+  CATEGORIAS,
+  guardarNoCache,
+  medirDuracao,
+  nomeDoAudioGravado,
+  problemaDoArquivo,
+  tipoBase,
+  tipoDoArquivo,
+} from "../utilidades/arquivos.js";
 import { nomeDoAutor, preencherModelo, resumoDaMensagem } from "../utilidades/conversas.js";
 import { normalizar } from "../utilidades/texto.js";
 import { useTelaEstreita } from "../hooks/useTelaEstreita.js";
@@ -9,6 +19,7 @@ import { useGravador } from "../hooks/useGravador.js";
 import { formatarDuracao } from "../utilidades/texto.js";
 import { Citacao } from "./Mensagem.jsx";
 import Icone from "./Icone.jsx";
+import MenuFlutuante from "./MenuFlutuante.jsx";
 
 const LIMITE_AUDIO_SEGUNDOS = 5 * 60; // 5 minutos: depois disso, envia sozinho
 
@@ -53,6 +64,14 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     : [];
   const ativa = Math.min(sugestaoAtiva, Math.max(sugestoes.length - 1, 0));
 
+  // Anexos: quantos arquivos estão subindo agora (para o aviso "Enviando…") e o menu "+"
+  const [subindo, setSubindo] = useState(0);
+  const seletor = useRef(null); // o <input type="file"> escondido
+  const categoriaEscolhida = useRef("documento");
+  const botaoAnexo = useRef(null);
+  const [menuAnexo, setMenuAnexo] = useState(null);
+  const fecharMenuAnexo = useCallback(() => setMenuAnexo(null), []);
+
   // Começou a responder uma mensagem: o cursor vai para o campo
   useEffect(() => {
     if (respondendoA) campo.current?.focus();
@@ -79,9 +98,9 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     campo.current?.focus();
   }
 
-  /* Envio comum para texto, áudio e nota.
-     conteudo = { tipo: "texto", texto }, { tipo: "audio", audioUrl, duracao }
-     ou { tipo: "nota", texto } */
+  /* Envio comum para texto, nota, áudio e arquivo.
+     conteudo = { tipo: "texto", texto }, { tipo: "nota", texto },
+     { tipo: "audio", arquivo, duracao } ou { tipo: "arquivo", arquivo } */
   function despacharEnvio(conteudo) {
     // Id e horário nascem AQUI (o reducer precisa ser puro)
     const id = novoId("m");
@@ -134,9 +153,85 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     const audio = await gravador.parar(true);
     if (!audio) return;
     if (audio.curto) return avisar(despachar, "Áudio muito curto");
-    if (audio.erro) return avisar(despachar, "Não foi possível processar o áudio");
-    despacharEnvio({ tipo: "audio", audioUrl: audio.audioUrl, duracao: audio.duracao });
+    // O áudio gravado vira um arquivo como outro qualquer: "audio-14h32.webm"
+    const tipo = tipoBase(audio.blob.type);
+    await enviarUmArquivo(audio.blob, { nome: nomeDoAudioGravado(tipo), tipo, duracao: audio.duracao });
   }
+
+  /* ---------- Anexos (o botão "+") ----------
+     Enviar um arquivo são dois passos:
+     1. o ARQUIVO vai para o servidor (esperamos terminar: pode demorar)
+     2. a MENSAGEM que aponta para ele é despachada, como qualquer outra */
+
+  // duracao (só áudio): com ela, a mensagem vira um balão de áudio com ▶
+  async function enviarUmArquivo(conteudo, { nome, tipo, duracao }) {
+    const id = novoId("arq");
+    setSubindo((n) => n + 1);
+    try {
+      const arquivo = await enviarArquivo(estado.sessao?.token, { id, conteudo, nome, tipo });
+      guardarNoCache(id, conteudo); // já temos os bytes: nada de baixar de volta
+      despacharEnvio(duracao === undefined ? { tipo: "arquivo", arquivo } : { tipo: "audio", arquivo, duracao });
+    } catch (erro) {
+      avisar(despachar, `Não foi possível enviar "${nome}": ${erro.message}`);
+    } finally {
+      setSubindo((n) => n - 1);
+    }
+  }
+
+  /* Abre a janela de arquivos do sistema. O <input type="file"> fica
+     escondido: quem o "clica" é o código, depois que a pessoa escolhe
+     a opção no menu. O "accept" filtra o que aparece na janela */
+  function escolherArquivos(categoria) {
+    categoriaEscolhida.current = categoria;
+    seletor.current.accept = CATEGORIAS[categoria].accept;
+    seletor.current.value = ""; // sem isso, escolher o MESMO arquivo de novo não dispara o onChange
+    seletor.current.click();
+  }
+
+  // A pessoa escolheu um ou mais arquivos: confere e envia um por um, na ordem
+  async function aoEscolherArquivos(evento) {
+    const categoria = categoriaEscolhida.current;
+    // [...lista]: os arquivos vêm numa "FileList", que não tem .map; viramos array
+    for (const arquivo of [...evento.target.files]) {
+      const problema = problemaDoArquivo(arquivo, categoria);
+      if (problema) {
+        avisar(despachar, problema);
+        continue; // pula este e segue com os outros
+      }
+      const tipo = tipoDoArquivo(arquivo);
+      const duracao = categoria === "audio" ? await medirDuracao(arquivo) : undefined;
+      await enviarUmArquivo(arquivo, { nome: arquivo.name, tipo, duracao });
+    }
+  }
+
+  function aoClicarAnexo() {
+    if (edicao) return avisar(despachar, "Termine ou cancele a edição primeiro");
+    // No modo nota, o botão mostra o 📝 aceso: clicar volta para a mensagem normal
+    if (modoNota) {
+      aoAlternarNota();
+      return campo.current?.focus();
+    }
+    if (menuAnexo) return fecharMenuAnexo();
+    const caixa = botaoAnexo.current.getBoundingClientRect();
+    // Abre ACIMA do botão (o campo fica no rodapé da tela)
+    setMenuAnexo({ x: caixa.left, y: caixa.top - 8 - 4 * 44 });
+  }
+
+  const opcoesAnexo = [
+    { id: "documento", rotulo: "Documento", icone: "documento", acao: () => escolherArquivos("documento") },
+    { id: "foto", rotulo: "Fotos", icone: "imagem", acao: () => escolherArquivos("foto") },
+    { id: "audio", rotulo: "Áudio", icone: "mic", acao: () => escolherArquivos("audio") },
+    { divisoria: true },
+    {
+      id: "nota",
+      rotulo: "Nota interna",
+      icone: "nota",
+      acao: () => {
+        aoAlternarNota();
+        campo.current?.focus();
+      },
+    },
+  ];
 
   // Chegou ao limite de 5 minutos? Envia sozinho
   useEffect(() => {
@@ -233,6 +328,28 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
         </ul>
       )}
 
+      {subindo > 0 && (
+        <div className="enviando-arquivo" role="status">
+          <span className="enviando-arquivo__giro" aria-hidden="true" />
+          Enviando {subindo === 1 ? "arquivo" : `${subindo} arquivos`}…
+        </div>
+      )}
+
+      {/* multiple: dá para escolher vários de uma vez. Fica escondido (o menu "+" é quem abre) */}
+      <input ref={seletor} type="file" multiple hidden onChange={aoEscolherArquivos} />
+
+      {menuAnexo && (
+        <MenuFlutuante
+          titulo="Anexar"
+          opcoes={opcoesAnexo}
+          x={menuAnexo.x}
+          y={menuAnexo.y}
+          folha={estreita}
+          ancora={botaoAnexo}
+          aoFechar={fecharMenuAnexo}
+        />
+      )}
+
       {/* Gravando? A barra de gravação aparece NO LUGAR do campo */}
       {gravador.gravando ? (
         <div className="gravacao">
@@ -250,21 +367,20 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
         </div>
       ) : (
         <form className={pareceNota ? "chat__envio chat__envio--nota" : "chat__envio"} onSubmit={enviar}>
-          {/* 📝 Alterna entre mensagem para o cliente e nota interna (só a equipe vê) */}
+          {/* "+": abre o menu com Documento, Fotos, Áudio e Nota interna.
+              No modo nota, vira o 📝 aceso (clicar volta para a mensagem normal) */}
           <button
             type="button"
+            ref={botaoAnexo}
             className="botao-nota"
             aria-pressed={pareceNota}
-            aria-label="Escrever nota interna"
-            title="Nota interna: só a equipe vê"
-            onClick={() => {
-              // Editando? Não deixa transformar mensagem em nota (nem o contrário)
-              if (edicao) return avisar(despachar, "Termine ou cancele a edição primeiro");
-              aoAlternarNota();
-              campo.current?.focus();
-            }}
+            aria-haspopup={modoNota ? undefined : "menu"}
+            aria-expanded={modoNota ? undefined : Boolean(menuAnexo)}
+            aria-label={modoNota ? "Sair da nota interna" : "Anexar arquivo ou escrever nota interna"}
+            title={modoNota ? "Sair da nota interna" : "Anexar"}
+            onClick={aoClicarAnexo}
           >
-            <Icone nome="nota" />
+            <Icone nome={pareceNota ? "nota" : "adicionar"} />
           </button>
           <label htmlFor="campo-mensagem" className="visualmente-oculto">
             Digite uma mensagem

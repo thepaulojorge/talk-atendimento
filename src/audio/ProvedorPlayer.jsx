@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ContextoPlayer } from "./contextoPlayer.js";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
+import { enderecoDoArquivo } from "../utilidades/arquivos.js";
 
 /* UM player para o app inteiro: tocar um áudio pausa o outro, como no WhatsApp */
 export default function ProvedorPlayer({ children }) {
@@ -61,7 +62,7 @@ export default function ProvedorPlayer({ children }) {
   const tocarOuPausar = useCallback(
     (msg) => {
       const audio = audioRef.current;
-      if (!msg.audioUrl) {
+      if (!msg.arquivo && !msg.audioUrl) {
         avisar(despachar, "Este é um áudio de exemplo, sem arquivo. Grave um no 🎤 para testar!");
         return;
       }
@@ -75,13 +76,27 @@ export default function ProvedorPlayer({ children }) {
 
       // Outro áudio: troca e começa do início
       audio.pause();
-      audio.src = msg.audioUrl;
       idAtualRef.current = msg.id;
       setTocandoId(msg.id);
       setTempo(0);
-      audio.play().catch(() => avisar(despachar, "Não foi possível tocar este áudio"));
+
+      /* Os áudios novos são ARQUIVOS no servidor: primeiro buscamos (com o
+         token), depois tocamos. Os antigos (B5) vinham inteiros no audioUrl */
+      const endereco = msg.arquivo
+        ? enderecoDoArquivo(estado.sessao?.token, msg.arquivo.id)
+        : Promise.resolve(msg.audioUrl);
+      endereco
+        .then((src) => {
+          if (idAtualRef.current !== msg.id) return; // trocou de áudio enquanto carregava
+          audio.src = src;
+          return audio.play();
+        })
+        .catch((erro) => {
+          if (idAtualRef.current === msg.id) parar();
+          avisar(despachar, erro.status ? erro.message : "Não foi possível tocar este áudio");
+        });
     },
-    [despachar]
+    [despachar, estado.sessao?.token, parar]
   );
 
   /* Clique na barra: "fracao" vai de 0 (início) a 1 (fim).

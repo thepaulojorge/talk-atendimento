@@ -43,7 +43,23 @@ export function estaResolvida(conversa) {
 
 export function resumoDaMensagem(msg) {
   if (msg.apagada) return "🚫 Mensagem apagada";
-  return msg.tipo === "audio" ? `🎤 Áudio (${formatarDuracao(msg.duracao)})` : msg.texto;
+  if (msg.tipo === "audio") return `🎤 Áudio (${formatarDuracao(msg.duracao)})`;
+  if (msg.tipo === "arquivo") return descreverArquivo(msg);
+  return msg.texto;
+}
+
+// "📷 Foto" ou "📄 orcamento.pdf"
+function descreverArquivo(msg) {
+  if (!msg.arquivo) return "📎 Arquivo";
+  return msg.arquivo.tipo.startsWith("image/") ? "📷 Foto" : `📄 ${msg.arquivo.nome}`;
+}
+
+/* O conteúdo em texto, para REGISTRO (auditoria e cópia da conversa excluída):
+   "🎤 Áudio de 0:22", "📎 orcamento.pdf" ou o próprio texto */
+export function conteudoParaRegistro(msg) {
+  if (msg.tipo === "audio") return `🎤 Áudio de ${formatarDuracao(msg.duracao)}`;
+  if (msg.tipo === "arquivo") return `📎 ${msg.arquivo?.nome || "Arquivo"}`;
+  return msg.texto;
 }
 
 /* Prévia na lista: "Você: ...", "Carla: ...", "Bruno: 🎤 Áudio (0:22)" */

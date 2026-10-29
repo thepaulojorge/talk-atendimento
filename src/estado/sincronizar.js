@@ -65,13 +65,17 @@ export function pedidoDaAcao(acao, estado) {
     case "excluirConversa":
       return { metodo: "DELETE", caminho: `/conversas/${de(acao.id)}` };
 
-    // Texto, nota, áudio e encaminhada: tudo pelo mesmo caminho
-    case "enviarMensagem":
+    /* Texto, nota, áudio, arquivo e encaminhada: tudo pelo mesmo caminho.
+       Na tela, a mensagem guarda o arquivo inteiro ({ id, nome, tipo, tamanho });
+       para o servidor, basta o id (ele já tem o resto, desde o upload) */
+    case "enviarMensagem": {
+      const { arquivo, ...resto } = acao.conteudo;
       return {
         metodo: "POST",
         caminho: `/conversas/${de(acao.conversaId)}/mensagens`,
-        corpo: { id: acao.id, ...acao.conteudo, respostaA: acao.respostaA || null },
+        corpo: { id: acao.id, ...resto, arquivoId: arquivo?.id, respostaA: acao.respostaA || null },
       };
+    }
 
     case "editarMensagem":
       return { metodo: "PATCH", caminho: `/mensagens/${de(acao.mensagemId)}`, corpo: { texto: acao.texto } };

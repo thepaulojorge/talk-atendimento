@@ -3059,3 +3059,159 @@ kbd {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
+
+/* =========================================================
+   ANEXOS (fotos e documentos nas mensagens)
+   ========================================================= */
+.botao-nota[aria-expanded="true"] {
+  background: var(--fundo-ativo);
+  color: var(--texto);
+}
+
+/* O "+" gira um pouco quando o menu está aberto, como no WhatsApp */
+.botao-nota .icone {
+  transition: transform 0.15s ease;
+}
+
+.botao-nota[aria-expanded="true"] .icone {
+  transform: rotate(45deg);
+}
+
+/* Cartão do documento: [PDF] nome / tamanho [⬇] */
+.anexo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--fundo-citacao);
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.anexo:hover {
+  background: var(--fundo-hover);
+}
+
+.anexo--indisponivel {
+  cursor: default;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--texto-suave);
+}
+
+.anexo__selo {
+  width: 38px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--avatar-fundo);
+  color: var(--avatar-texto);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Uma cor por tipo, para reconhecer de longe (as mesmas do Office) */
+.anexo__selo[data-tipo="pdf"] { background: #c62828; color: #fff; }
+.anexo__selo[data-tipo="doc"],
+.anexo__selo[data-tipo="docx"] { background: #1e5bb8; color: #fff; }
+.anexo__selo[data-tipo="xls"],
+.anexo__selo[data-tipo="xlsx"],
+.anexo__selo[data-tipo="csv"] { background: #1d7a45; color: #fff; }
+
+.anexo__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.anexo__nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.anexo__tamanho {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.anexo__baixar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--borda);
+  color: var(--texto-suave);
+}
+
+.anexo__baixar:hover {
+  color: var(--texto);
+  background: var(--fundo-ativo);
+}
+
+.anexo__baixar .icone {
+  width: 18px;
+  height: 18px;
+}
+
+/* Foto: a imagem em si, com no máximo 280px, sem distorcer */
+.anexo-foto {
+  display: block;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.anexo-foto img {
+  max-width: min(280px, 100%);
+  max-height: 320px;
+  object-fit: cover;
+}
+
+.anexo-foto--carregando {
+  width: 220px;
+  height: 160px;
+  background: var(--fundo-citacao);
+  animation: piscar 1.2s ease-in-out infinite;
+}
+
+@keyframes piscar {
+  50% { opacity: 0.5; }
+}
+
+/* "Enviando arquivo…" logo acima do campo */
+.enviando-arquivo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 13px;
+  color: var(--texto-suave);
+  background: var(--fundo-painel);
+  border-top: 1px solid var(--borda);
+}
+
+.enviando-arquivo__giro {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--borda);
+  border-top-color: var(--texto);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}

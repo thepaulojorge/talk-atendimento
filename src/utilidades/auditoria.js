@@ -15,8 +15,8 @@ export const TIPOS_DE_ACAO = {
 // "editou uma mensagem", "apagou um áudio", "excluiu a conversa"
 export function descricaoDaAcao(registro) {
   if (registro.tipo === "conversa") return "excluiu a conversa";
-  const oQue =
-    registro.tipoMensagem === "nota" ? "uma nota interna" : registro.tipoMensagem === "audio" ? "um áudio" : "uma mensagem";
+  const nomes = { nota: "uma nota interna", audio: "um áudio", arquivo: "um arquivo" };
+  const oQue = nomes[registro.tipoMensagem] || "uma mensagem";
   return registro.tipo === "edicao" ? `editou ${oQue}` : `apagou ${oQue}`;
 }
 

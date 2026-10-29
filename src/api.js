@@ -14,11 +14,15 @@ export const API_URL = import.meta.env.VITE_API_URL || "";
    - o token de login ("Authorization: Bearer ..."), nas rotas protegidas
    - erros com uma mensagem que a pessoa entende
    Devolve a resposta já convertida de JSON, ou LANÇA um erro com
-   .status (401, 403...) para quem chamou poder decidir o que fazer */
-async function pedir(caminho, { metodo = "GET", corpo, token } = {}) {
+   .status (401, 403...) para quem chamou poder decidir o que fazer.
+
+   Para ARQUIVOS, duas opções a mais:
+   - arquivo + cabecalhos: manda o arquivo "cru" no corpo (em vez de JSON)
+   - comoBlob: devolve a resposta como Blob (os bytes de um arquivo) */
+async function pedir(caminho, { metodo = "GET", corpo, token, arquivo, cabecalhos: extras = {}, comoBlob = false } = {}) {
   if (!API_URL) throw new Error("O endereço da API (VITE_API_URL) não está configurado.");
 
-  const cabecalhos = {};
+  const cabecalhos = { ...extras };
   if (corpo) cabecalhos["Content-Type"] = "application/json";
   if (token) cabecalhos.Authorization = `Bearer ${token}`;
 
@@ -27,13 +31,15 @@ async function pedir(caminho, { metodo = "GET", corpo, token } = {}) {
     resposta = await fetch(`${API_URL}/api${caminho}`, {
       method: metodo,
       headers: cabecalhos,
-      body: corpo ? JSON.stringify(corpo) : undefined,
+      body: arquivo ?? (corpo ? JSON.stringify(corpo) : undefined),
     });
   } catch {
     // fetch só "quebra" assim quando nem chegou ao servidor (desligado, sem internet)
     const dica = API_URL.includes("localhost") ? " Ele está ligado? (npm run dev na pasta talk-atendimento-api)" : "";
     throw new Error(`Não foi possível falar com o servidor.${dica}`);
   }
+
+  if (comoBlob && resposta.ok) return resposta.blob();
 
   /* A API responde em JSON, inclusive os erros: { erro: "..." }.
      O 204 ("deu certo, sem conteúdo") não tem corpo: o .catch devolve {} */
@@ -74,3 +80,22 @@ export const gravar = (token, { metodo, caminho, corpo }) => pedir(caminho, { me
 
 // Modo demonstração: volta o banco inteiro aos exemplos
 export const restaurarDemonstracao = (token) => pedir("/demonstracao/restaurar", { metodo: "POST", token });
+
+/* ARQUIVOS
+   Enviar: o corpo é o próprio arquivo (File ou Blob). O nome vai num
+   cabeçalho, codificado: cabeçalhos HTTP não aceitam acentos ("orçamento")
+   Devolve { id, nome, tipo, tamanho } */
+export const enviarArquivo = (token, { id, conteudo, nome, tipo }) =>
+  pedir("/arquivos", {
+    metodo: "POST",
+    token,
+    arquivo: conteudo,
+    cabecalhos: { "Content-Type": tipo, "X-Arquivo-Id": id, "X-Arquivo-Nome": encodeURIComponent(nome) },
+  });
+
+/* Buscar o CONTEÚDO de um arquivo (um Blob).
+   Por que não um simples <img src="https://.../api/arquivos/arq-1">?
+   Porque o <img> não sabe mandar o token, e o servidor só entrega
+   arquivos para quem está logado. Então buscamos com fetch (que manda
+   o token) e mostramos o resultado (ver utilidades/arquivos.js) */
+export const buscarArquivo = (token, id) => pedir(`/arquivos/${encodeURIComponent(id)}`, { token, comoBlob: true });

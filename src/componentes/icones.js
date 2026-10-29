@@ -35,5 +35,8 @@ export const ICONES = {
   sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
   // Duas telas lado a lado: as estações que você está atendendo
   estacoes: '<rect x="2.5" y="4.5" width="8.5" height="11" rx="1.5"/><rect x="13" y="4.5" width="8.5" height="11" rx="1.5"/><path d="M5 19.5h3.5M15.5 19.5H19"/>',
+  adicionar: '<path d="M12 5v14M5 12h14"/>',
+  documento: '<path d="M14 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3.5V8h4.5M9 12.5h6M9 16h6"/>',
+  imagem: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m20.5 16-5-5-8.5 8.5"/>',
   lua: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
 };

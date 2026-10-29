@@ -174,10 +174,10 @@ function ChatAberto({ conversa }) {
     const msg = acharMsg(encaminhandoId);
     if (!msg) return;
     // Só o conteúdo viaja: autor, horário e citação são da conversa nova
-    const conteudo =
-      msg.tipo === "audio"
-        ? { tipo: "audio", audioUrl: msg.audioUrl, duracao: msg.duracao, encaminhada: true }
-        : { tipo: "texto", texto: msg.texto, encaminhada: true };
+    // O arquivo não é enviado de novo: a mensagem nova aponta para o MESMO arquivo
+    let conteudo = { tipo: "texto", texto: msg.texto, encaminhada: true };
+    if (msg.tipo === "audio") conteudo = { tipo: "audio", arquivo: msg.arquivo, duracao: msg.duracao, encaminhada: true };
+    if (msg.tipo === "arquivo") conteudo = { tipo: "arquivo", arquivo: msg.arquivo, encaminhada: true };
 
     despachar({
       tipo: "enviarMensagem",
