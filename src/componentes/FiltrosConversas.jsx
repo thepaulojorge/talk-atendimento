@@ -52,12 +52,29 @@ export default function FiltrosConversas({ filtro, setFiltro, etiqueta, setEtiqu
     setMenu({ x: caixa.left, y: caixa.bottom + 4 });
   }
 
+  const marcar = (ativo, nome) => `${ativo ? "✓ " : ""}${nome}`;
+
   // O botão "Mais" mostra o nome do filtro escolhido dentro dele (se houver)
   const outroAtivo = OUTROS.find((f) => f.id === filtro);
   const etiquetaAtiva = estado.etiquetas.find((e) => e.id === etiqueta);
-  const nomeDoMais = outroAtivo?.nome || etiquetaAtiva?.nome;
+  const linhaAtiva = estado.linhas.find((l) => `linha:${l.id}` === filtro);
+  const nomeDoMais = outroAtivo?.nome || etiquetaAtiva?.nome || linhaAtiva?.sigla;
 
-  const marcar = (ativo, nome) => `${ativo ? "✓ " : ""}${nome}`;
+  /* Atendendo mais de uma estação? Dá para ver só as conversas de uma delas.
+     Com uma linha só, o filtro não teria utilidade e nem aparece */
+  const filtrosDeLinha =
+    estado.linhas.length > 1
+      ? [
+          { divisoria: true },
+          ...estado.linhas.map((l) => ({
+            id: `linha-${l.id}`,
+            rotulo: marcar(filtro === `linha:${l.id}`, `Só ${l.nome}`),
+            icone: "estacoes",
+            acao: () => escolherFiltro(`linha:${l.id}`),
+          })),
+        ]
+      : [];
+
   const opcoes = [
     ...OUTROS.map((f) => ({ id: f.id, rotulo: marcar(filtro === f.id, f.nome), acao: () => escolherFiltro(f.id) })),
     { divisoria: true },
@@ -67,6 +84,7 @@ export default function FiltrosConversas({ filtro, setFiltro, etiqueta, setEtiqu
       icone: "etiqueta",
       acao: () => escolherEtiqueta(e.id),
     })),
+    ...filtrosDeLinha,
   ];
 
   return (

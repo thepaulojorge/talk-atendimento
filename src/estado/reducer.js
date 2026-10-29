@@ -29,6 +29,7 @@ export const estadoInicial = {
   respostasRapidas: [],
   auditoria: [],
   estacoes: [], // as estações de atendimento e a escala de turnos de cada uma
+  linhas: [], // os números de WhatsApp que ESTA pessoa atende (o servidor decide)
   modoDemonstracao: false, // o servidor aceita o "Entrar na demonstração"?
   sessao: null, // quem entrou: { email, atendenteId, estacaoId?, turnoId?, desde }
   atendenteLogadoId: null, // a PESSOA por trás da sessão (null = tela de login)
@@ -128,8 +129,15 @@ function acharMensagem(estado, conversaId, mensagemId) {
 
 export function reducer(estado, acao) {
   switch (acao.tipo) {
-    case "dadosCarregados":
-      return { ...estado, ...acao.dados, carregando: false };
+    /* Também chega aqui ao RECARREGAR (puxou ou soltou uma estação).
+       Soltou a estação da conversa que estava aberta? Ela fecha */
+    case "dadosCarregados": {
+      const novo = { ...estado, ...acao.dados, carregando: false };
+      if (!novo.conversas.some((c) => c.id === novo.conversaAbertaId)) {
+        return { ...novo, conversaAbertaId: null, painelDadosAberto: false };
+      }
+      return novo;
+    }
 
     // Volta tudo ao exemplo: fecha a conversa e esquece os rascunhos
     case "dadosRestaurados":
@@ -155,13 +163,17 @@ export function reducer(estado, acao) {
       };
 
     /* Iniciar conversa pela aba de Contatos. A ação traz:
-       { contatoId, conversaId, novoContato? }
+       { contatoId, conversaId, linhaId, novoContato? }
+       - linhaId: por qual número de WhatsApp (a mesma pessoa pode ter
+         uma conversa com a E01 e outra, separada, com a E02)
        - novoContato: número não salvo; entra na lista com salvo: false
        - já existe conversa com o contato? Reaproveita (e desarquiva)
        - não existe? Cria uma vazia, já com quem iniciou como responsável */
     case "iniciarConversa": {
       const contatos = acao.novoContato ? [...estado.contatos, acao.novoContato] : estado.contatos;
-      const existente = estado.conversas.find((c) => c.tipo === "contato" && c.contatoId === acao.contatoId);
+      const existente = estado.conversas.find(
+        (c) => c.tipo === "contato" && c.contatoId === acao.contatoId && c.linhaId === acao.linhaId
+      );
 
       let conversas;
       let id;
@@ -176,6 +188,7 @@ export function reducer(estado, acao) {
           {
             id,
             tipo: "contato",
+            linhaId: acao.linhaId,
             contatoId: acao.contatoId,
             atendenteId: estado.atendenteLogadoId,
             marcadaNaoLida: false,
@@ -546,12 +559,6 @@ export function reducer(estado, acao) {
       const aberta = reducer({ ...estado, secao: "conversas" }, { tipo: "abrirConversa", id: acao.conversaId });
       return { ...aberta, mensagemEmFoco: acao.mensagemId || null };
     }
-
-    /* Configurações (só a diretoria): { marca, estacoes }
-       A tela já confere a permissão; o reducer confere de novo */
-    case "salvarConfiguracoes":
-      if (buscarPorId(estado.atendentes, estado.atendenteLogadoId)?.papel !== "diretoria") return estado;
-      return { ...estado, marca: acao.marca, estacoes: acao.estacoes };
 
     // ✓✓ fica azul (por enquanto, quem avisa é uma simulação)
     case "mensagemLida":

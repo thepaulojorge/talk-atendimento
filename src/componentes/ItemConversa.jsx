@@ -43,6 +43,10 @@ export default function ItemConversa({ conversa, termoBusca = "", selecionada, a
   const temStatus = resolvida || !conversa.atendenteId;
   const cabem = temStatus ? 1 : 2;
 
+  /* Atendendo mais de uma linha? Cada conversa mostra de qual estação é
+     ("E02"), para não responder pelo número errado */
+  const linha = estado.linhas.length > 1 ? buscarPorId(estado.linhas, conversa.linhaId) : null;
+
   // Antes: um ouvinte na LISTA inteira (delegação). No React, cada item
   // tem o próprio onClick, e o React cuida da eficiência por baixo
   function abrir() {
@@ -76,8 +80,13 @@ export default function ItemConversa({ conversa, termoBusca = "", selecionada, a
             colocado como TEXTO, nunca como HTML: o React já protege contra XSS */}
         <div className="conversa__previa">{previaParaLista(conversa, estado, termoBusca)}</div>
 
-        {(temStatus || etiquetas.length > 0) && (
+        {(linha || temStatus || etiquetas.length > 0) && (
           <div className="conversa__etiquetas">
+            {linha && (
+              <span className="selo selo--linha" title={`Linha ${linha.nome}`}>
+                {linha.sigla}
+              </span>
+            )}
             {resolvida && <span className="selo selo--resolvida">✓ Resolvida</span>}
             {!resolvida && !conversa.atendenteId && <span className="selo">Sem atendente</span>}
 

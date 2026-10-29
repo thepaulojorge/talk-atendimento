@@ -35,7 +35,8 @@ async function pedir(caminho, { metodo = "GET", corpo, token } = {}) {
     throw new Error(`Não foi possível falar com o servidor.${dica}`);
   }
 
-  // A API sempre responde em JSON, inclusive os erros: { erro: "..." }
+  /* A API responde em JSON, inclusive os erros: { erro: "..." }.
+     O 204 ("deu certo, sem conteúdo") não tem corpo: o .catch devolve {} */
   const conteudo = await resposta.json().catch(() => ({}));
   if (!resposta.ok) {
     const erro = new Error(conteudo.erro || `O servidor respondeu com erro ${resposta.status}.`);
@@ -54,3 +55,22 @@ export const entrarDemonstracao = () => pedir("/auth/demonstracao", { metodo: "P
 
 // Protegida: precisa do token
 export const buscarDados = (token) => pedir("/dados", { token });
+
+// Puxar e soltar estações (atendentes)
+export const puxarEstacao = (token, estacaoId) => pedir(`/estacoes/${estacaoId}/puxar`, { metodo: "POST", token });
+export const soltarEstacao = (token, estacaoId) => pedir(`/estacoes/${estacaoId}/puxar`, { metodo: "DELETE", token });
+
+// Sair: o servidor solta as estações puxadas
+export const sairNoServidor = (token) => pedir("/auth/sair", { metodo: "POST", token });
+
+// Configurações da empresa (diretoria)
+export const buscarConfiguracoes = (token) => pedir("/configuracoes", { token });
+export const salvarConfiguracoes = (token, configuracoes) =>
+  pedir("/configuracoes", { metodo: "PUT", corpo: configuracoes, token });
+
+/* B5: GRAVAR uma ação no banco. Quem monta o pedido (método, endereço e
+   corpo) é o estado/sincronizar.js; aqui só enviamos */
+export const gravar = (token, { metodo, caminho, corpo }) => pedir(caminho, { metodo, corpo, token });
+
+// Modo demonstração: volta o banco inteiro aos exemplos
+export const restaurarDemonstracao = (token) => pedir("/demonstracao/restaurar", { metodo: "POST", token });

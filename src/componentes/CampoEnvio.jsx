@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
+import { novoId } from "../utilidades/ids.js";
 import { nomeDoAutor, preencherModelo, resumoDaMensagem } from "../utilidades/conversas.js";
 import { normalizar } from "../utilidades/texto.js";
 import { useTelaEstreita } from "../hooks/useTelaEstreita.js";
@@ -83,7 +84,7 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
      ou { tipo: "nota", texto } */
   function despacharEnvio(conteudo) {
     // Id e horário nascem AQUI (o reducer precisa ser puro)
-    const id = `m${Date.now()}`;
+    const id = novoId("m");
     const ehNota = conteudo.tipo === "nota";
     despachar({
       tipo: "enviarMensagem",
@@ -95,11 +96,12 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     });
     aoCancelarCitacao();
 
-    // Nota não vai para o cliente: ninguém "lê" do outro lado
-    if (ehNota) return;
+    // Nota não vai para o cliente: ninguém "lê" do outro lado.
+    // A simulação só existe no modo demonstração (o servidor recusa fora dele)
+    if (ehNota || !estado.modoDemonstracao) return;
 
     /* ⚠️ SIMULAÇÃO: finge que o cliente leu 3 segundos depois.
-       Com o backend, quem avisa a leitura é o WhatsApp */
+       Com o WhatsApp de verdade (B7), quem avisa a leitura é ele */
     const conversaId = conversa.id;
     setTimeout(() => despachar({ tipo: "mensagemLida", conversaId, mensagemId: id }), 3000);
   }

@@ -12,6 +12,13 @@ export default function PainelContatos({ aoFechar, aoIniciarConversa }) {
   const { estado, despachar } = useEstado();
   const [busca, setBusca] = useState("");
 
+  /* Por qual LINHA (número de WhatsApp) a conversa vai começar.
+     Começa na linha da sua estação; quem puxou outras estações escolhe.
+     Função no useState: o valor inicial é calculado uma vez só */
+  const [linhaId, setLinhaId] = useState(
+    () => (estado.linhas.find((l) => l.estacaoId === estado.sessao?.estacaoId) ?? estado.linhas[0])?.id
+  );
+
   const termo = normalizar(busca);
   const digitos = somenteDigitos(busca);
   // Número completo (DDD + número) já no formato guardado: "5521999998888"
@@ -50,7 +57,7 @@ export default function PainelContatos({ aoFechar, aoIniciarConversa }) {
       novoContato = { id: contatoId, nome: numero, numero, email: null, empresa: null, observacao: null, salvo: false };
     }
 
-    despachar({ tipo: "iniciarConversa", contatoId, conversaId: novoId("c"), novoContato });
+    despachar({ tipo: "iniciarConversa", contatoId, conversaId: novoId("c"), linhaId, novoContato });
     aoIniciarConversa();
   }
 
@@ -98,6 +105,20 @@ export default function PainelContatos({ aoFechar, aoIniciarConversa }) {
           onKeyDown={aoApertarTeclaBusca}
         />
       </div>
+
+      {/* Só aparece para quem atende mais de uma linha */}
+      {estado.linhas.length > 1 && (
+        <label className="contatos__linha">
+          <span>Conversar pela linha</span>
+          <select value={linhaId} onChange={(evento) => setLinhaId(evento.target.value)}>
+            {estado.linhas.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.sigla} · {formatarNumero(l.numero)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <ul className="lista-contatos">
         {itens.length === 0 && (

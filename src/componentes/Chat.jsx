@@ -243,6 +243,8 @@ function ChatAberto({ conversa }) {
       ? conversa.participantes.join(", ")
       : buscarPorId(estado.contatos, conversa.contatoId)?.numero || "";
   const etiquetas = (conversa.etiquetas || []).map((id) => buscarPorId(estado.etiquetas, id)).filter(Boolean);
+  // Por qual número da empresa esta conversa acontece (só importa com mais de uma linha)
+  const linha = estado.linhas.length > 1 ? buscarPorId(estado.linhas, conversa.linhaId) : null;
 
   return (
     <section className="chat__aberto">
@@ -270,6 +272,7 @@ function ChatAberto({ conversa }) {
           </div>
           <p className="chat__detalhe">
             {detalhe} · {responsavel}
+            {linha && ` · Linha ${linha.sigla}`}
           </p>
         </div>
 
@@ -320,7 +323,7 @@ function ChatAberto({ conversa }) {
         <MenuFlutuante
           opcoes={acoesConversa.opcoesDe(conversa, {
             aoVerDados: () => despachar({ tipo: "abrirDados" }),
-            comSimulacao: true,
+            comSimulacao: estado.modoDemonstracao, // ferramenta de teste: só na demonstração
           })}
           x={menuTopo.x}
           y={menuTopo.y}

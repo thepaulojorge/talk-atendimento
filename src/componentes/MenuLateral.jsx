@@ -6,6 +6,7 @@ import { useTelaEstreita } from "../hooks/useTelaEstreita.js";
 import { buscarPorId, contarTotalNaoLidas } from "../utilidades/conversas.js";
 import { PAPEIS, papelDe, podeConfigurar, podeVerAuditoria } from "../utilidades/permissoes.js";
 import { descreverSessao } from "../utilidades/turnos.js";
+import { sairNoServidor } from "../api.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
 import MenuFlutuante from "./MenuFlutuante.jsx";
@@ -41,6 +42,10 @@ export default function MenuLateral() {
   }
 
   function sair() {
+    /* Avisa o servidor (ele solta as estações que você tinha puxado).
+       Não esperamos a resposta: sair tem que ser na hora, mesmo sem
+       internet. Se falhar, o próximo login também solta tudo */
+    sairNoServidor(estado.sessao?.token).catch(() => {});
     despachar({ tipo: "sair" });
     avisar(despachar, "Você saiu. Até logo!");
   }
@@ -67,6 +72,20 @@ export default function MenuLateral() {
           ativo={estado.secao === "contatos"}
           aoClicar={() => irPara("contatos")}
         />
+
+        {/* Só quem entrou pelo e-mail de uma ESTAÇÃO pode puxar outras.
+            Supervisão e diretoria têm a linha delas e não puxam nenhuma */}
+        {estado.sessao?.estacaoId && (
+          <BotaoMenu
+            icone="estacoes"
+            rotulo="Estações"
+            ativo={estado.secao === "estacoes"}
+            aoClicar={() => irPara("estacoes")}
+            contador={estado.linhas.length > 1 ? estado.linhas.length : 0}
+            rotuloContador="estações com você"
+            neutro
+          />
+        )}
 
         {/* Só supervisão e diretoria veem este ícone */}
         {podeVerAuditoria(estado) && (
@@ -112,10 +131,15 @@ export default function MenuLateral() {
           titulo={`${atendente.nome} · ${onde}`}
           opcoes={[
             { id: "sair", rotulo: "Sair", icone: "sair", acao: sair },
-            { divisoria: true },
-            // Ferramenta de teste: volta tudo ao estado inicial
-            { id: "restaurar", rotulo: "↺ Restaurar dados de exemplo", teste: true, acao: () => setConfirmandoRestaurar(true) },
-          ]}
+            // Ferramenta de teste, só no modo demonstração: volta o banco ao exemplo
+            estado.modoDemonstracao && { divisoria: true },
+            estado.modoDemonstracao && {
+              id: "restaurar",
+              rotulo: "↺ Restaurar dados de exemplo",
+              teste: true,
+              acao: () => setConfirmandoRestaurar(true),
+            },
+          ].filter(Boolean)}
           x={menuConta.x}
           y={menuConta.y}
           // No celular, a conta fica no rodapé: o menu sobe como folha
@@ -130,7 +154,7 @@ export default function MenuLateral() {
       {confirmandoRestaurar && (
         <DialogoConfirmacao
           titulo="Restaurar dados de exemplo?"
-          texto="Tudo o que foi feito neste navegador (mensagens, edições, etiquetas, conversas novas) será apagado e os exemplos voltam ao início."
+          texto="Tudo o que foi feito na demonstração (mensagens, edições, etiquetas, conversas novas) será apagado, para todos que estiverem usando, e os exemplos voltam ao início."
           rotulo="Restaurar"
           perigo
           aoConfirmar={restaurarExemplo}
@@ -144,19 +168,20 @@ export default function MenuLateral() {
 /* Um ícone da barra. O nome aparece como dica (title) ao passar o mouse
    e é lido pelo leitor de tela (aria-label), já que não há texto visível.
    aria-current="page": diz ao leitor de tela qual seção está aberta */
-function BotaoMenu({ icone, rotulo, ativo = false, contador = 0, aoClicar }) {
+function BotaoMenu({ icone, rotulo, ativo = false, contador = 0, rotuloContador = "não lidas", neutro = false, aoClicar }) {
   return (
     <button
       type="button"
       className="menu-lateral__botao"
-      aria-label={contador > 0 ? `${rotulo}, ${contador} não lidas` : rotulo}
+      aria-label={contador > 0 ? `${rotulo}, ${contador} ${rotuloContador}` : rotulo}
       aria-current={ativo ? "page" : undefined}
       title={rotulo}
       onClick={aoClicar}
     >
       <Icone nome={icone} />
       {contador > 0 && (
-        <span className="menu-lateral__contador" aria-hidden="true">
+        // neutro: um número informativo (cinza), não um alerta como as não lidas
+        <span className={`menu-lateral__contador${neutro ? " menu-lateral__contador--neutro" : ""}`} aria-hidden="true">
           {contador > 99 ? "99+" : contador}
         </span>
       )}

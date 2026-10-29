@@ -190,8 +190,12 @@ function Registro({ registro }) {
   const autor = buscarPorId(estado.atendentes, registro.autorId);
   const nomeAutor = autor?.nome || "Atendente removido";
   const origem = origemDoRegistro(registro, estado);
-  // A conversa ainda existe? Então o nome vira um link para ela
-  const conversaExiste = registro.tipo !== "conversa" && buscarPorId(estado.conversas, registro.conversaId);
+  /* A conversa está na SUA lista? Então o nome vira um link para ela.
+     Ela pode existir e estar em outra linha (de uma estação): aí não há
+     como abrir daqui, mas também não foi excluída. Quem sabe é o servidor
+     (registro.conversaExiste) */
+  const naLista = registro.tipo !== "conversa" && buscarPorId(estado.conversas, registro.conversaId);
+  const excluida = registro.tipo !== "conversa" && registro.conversaExiste === false;
 
   return (
     <li className={`registro registro--${registro.tipo}`}>
@@ -212,7 +216,7 @@ function Registro({ registro }) {
 
       <p className="registro__onde">
         Conversa:{" "}
-        {conversaExiste ? (
+        {naLista ? (
           <button
             type="button"
             className="registro__link"
@@ -223,7 +227,8 @@ function Registro({ registro }) {
         ) : (
           <span>
             {registro.conversaNome}
-            {registro.tipo !== "conversa" && " (excluída)"}
+            {excluida && " (excluída)"}
+            {!excluida && registro.tipo !== "conversa" && " (em outra linha)"}
           </span>
         )}
       </p>

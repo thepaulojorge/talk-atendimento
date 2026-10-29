@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import PainelConversas from "./PainelConversas.jsx";
 import PainelContatos from "./PainelContatos.jsx";
+import PainelEstacoes from "./PainelEstacoes.jsx";
 
 /* Coluna da esquerda: a lista de conversas ou a aba de contatos.
    QUAL das duas aparece vem do estado global (estado.secao), porque
@@ -27,11 +28,15 @@ export default function BarraLateral() {
     setVendoArquivadas(false);
   }
 
+  const voltar = () => despachar({ tipo: "irPara", secao: "conversas" });
+
   return (
     <aside className="barra-lateral">
-      {estado.secao === "contatos" ? (
+      {estado.secao === "estacoes" ? (
+        <PainelEstacoes aoFechar={voltar} />
+      ) : estado.secao === "contatos" ? (
         <PainelContatos
-          aoFechar={() => despachar({ tipo: "irPara", secao: "conversas" })}
+          aoFechar={voltar}
           aoIniciarConversa={aoIniciarConversa}
         />
       ) : (

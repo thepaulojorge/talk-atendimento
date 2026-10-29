@@ -53,6 +53,8 @@ function combinaComFiltro(conversa, filtro, estado) {
     case "grupos":
       return conversa.tipo === "grupo";
     default:
+      // "linha:linha-e02": só as conversas daquele número (de quem puxou estações)
+      if (filtro.startsWith("linha:")) return conversa.linhaId === filtro.slice(6) || estaAberta;
       return true; // "todas"
   }
 }
