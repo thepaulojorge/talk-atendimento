@@ -6,11 +6,13 @@ import Icone from "./Icone.jsx";
    Separado da Mensagem de propósito: só ESTE componente "escuta" o player,
    então só ele é redesenhado enquanto o áudio toca */
 export default function BalaoAudio({ msg }) {
-  const { tocandoId, tocando, tempo, tocarOuPausar, avancar } = usePlayer();
+  const { tocandoId, tocando, tempo, duracaoDoArquivo, tocarOuPausar, avancar } = usePlayer();
 
   const ehOAtual = tocandoId === msg.id;
-  const progresso = ehOAtual && msg.duracao ? Math.min(100, (tempo / msg.duracao) * 100) : 0;
-  const tempoNaTela = ehOAtual ? Math.floor(tempo) : msg.duracao;
+  // Sem duração salva (áudio do WhatsApp)? Usa a que o player leu do arquivo
+  const duracao = msg.duracao || (ehOAtual ? duracaoDoArquivo : 0);
+  const progresso = ehOAtual && duracao ? Math.min(100, (tempo / duracao) * 100) : 0;
+  const tempoNaTela = ehOAtual ? Math.floor(tempo) : duracao;
 
   function aoClicarNaBarra(evento) {
     // currentTarget = o elemento que tem o onClick (a barra), não um filho dela

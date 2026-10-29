@@ -95,6 +95,8 @@ export default function Mensagem({ msg, conversa, destacada, selecionada, aoResp
 
       {msg.tipo === "audio" && <BalaoAudio msg={msg} />}
       {msg.tipo === "arquivo" && <BalaoArquivo arquivo={msg.arquivo} />}
+      {/* A legenda de uma foto ou documento (vem do WhatsApp) */}
+      {msg.tipo === "arquivo" && msg.texto && <div className="mensagem__texto">{msg.texto}</div>}
       {msg.tipo !== "audio" && msg.tipo !== "arquivo" && <div className="mensagem__texto">{msg.texto}</div>}
 
       <Rodape msg={msg} supervisao={supervisao} />
@@ -125,8 +127,14 @@ function Rodape({ msg, supervisao = false }) {
           editada
         </span>
       )}
+      {/* B7: o WhatsApp recusou a entrega? O motivo aparece no lugar dos ✓✓ */}
+      {msg.erroEnvio && (
+        <span className="mensagem__falhou" title={msg.erroEnvio}>
+          ⚠ Não entregue
+        </span>
+      )}
       <span className="mensagem__hora">{formatarHoraMensagem(msg.horario)}</span>
-      {msg.direcao === "enviada" && !msg.apagada && (
+      {msg.direcao === "enviada" && !msg.apagada && !msg.erroEnvio && (
         <span
           className={`mensagem__status${msg.lida ? " mensagem__status--lida" : ""}`}
           aria-label={msg.lida ? "Lida" : "Entregue"}

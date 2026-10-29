@@ -3215,3 +3215,39 @@ kbd {
 @keyframes girar {
   to { transform: rotate(360deg); }
 }
+
+/* =========================================================
+   WHATSAPP DE VERDADE (B7)
+   ========================================================= */
+.selo--whatsapp {
+  margin-left: 8px;
+  border-color: #25d366;
+  color: #25d366;
+  vertical-align: middle;
+}
+
+/* Cada linha nas Configurações: um quadrinho com o número e o ID da Meta */
+.config__linha {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.config__linha legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+/* "⚠ Não entregue" no rodapé da mensagem (o motivo aparece ao passar o mouse) */
+.mensagem__falhou {
+  color: var(--alerta);
+  font-weight: 600;
+  cursor: help;
+}

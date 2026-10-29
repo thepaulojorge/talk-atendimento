@@ -21,11 +21,16 @@ export default function ProvedorPlayer({ children }) {
   const [tocandoId, setTocandoId] = useState(null);
   const [tocando, setTocando] = useState(false);
   const [tempo, setTempo] = useState(0);
+  /* A duração lida do PRÓPRIO arquivo. Os áudios que chegam do WhatsApp
+     não informam a duração (vem 0): o player descobre ao carregar */
+  const [duracaoDoArquivo, setDuracaoDoArquivo] = useState(0);
 
   // O próprio <audio> avisa o que está acontecendo
   useEffect(() => {
     const audio = audioRef.current;
     const aoAtualizar = () => setTempo(audio.currentTime); // ~4x por segundo
+    // Infinity (WebM do Chrome) ou NaN (ainda carregando) não servem: fica 0
+    const aoSaberDuracao = () => setDuracaoDoArquivo(Number.isFinite(audio.duration) ? Math.round(audio.duration) : 0);
     const aoTocar = () => setTocando(true);
     const aoPausar = () => setTocando(false);
     const aoTerminar = () => {
@@ -36,11 +41,13 @@ export default function ProvedorPlayer({ children }) {
     };
 
     audio.addEventListener("timeupdate", aoAtualizar);
+    audio.addEventListener("durationchange", aoSaberDuracao);
     audio.addEventListener("play", aoTocar);
     audio.addEventListener("pause", aoPausar);
     audio.addEventListener("ended", aoTerminar);
     return () => {
       audio.removeEventListener("timeupdate", aoAtualizar);
+      audio.removeEventListener("durationchange", aoSaberDuracao);
       audio.removeEventListener("play", aoTocar);
       audio.removeEventListener("pause", aoPausar);
       audio.removeEventListener("ended", aoTerminar);
@@ -79,6 +86,7 @@ export default function ProvedorPlayer({ children }) {
       idAtualRef.current = msg.id;
       setTocandoId(msg.id);
       setTempo(0);
+      setDuracaoDoArquivo(0); // a do áudio anterior não vale mais
 
       /* Os áudios novos são ARQUIVOS no servidor: primeiro buscamos (com o
          token), depois tocamos. Os antigos (B5) vinham inteiros no audioUrl */
@@ -104,7 +112,8 @@ export default function ProvedorPlayer({ children }) {
      costumam informar duração "Infinity" */
   const avancar = useCallback((msg, fracao) => {
     if (idAtualRef.current !== msg.id) return;
-    const novoTempo = Math.max(0, Math.min(1, fracao)) * msg.duracao;
+    const total = msg.duracao || audioRef.current.duration || 0;
+    const novoTempo = Math.max(0, Math.min(1, fracao)) * (Number.isFinite(total) ? total : 0);
     audioRef.current.currentTime = novoTempo;
     setTempo(novoTempo);
   }, []);
@@ -120,7 +129,7 @@ export default function ProvedorPlayer({ children }) {
   }, [estado.conversaAbertaId]);
 
   return (
-    <ContextoPlayer.Provider value={{ tocandoId, tocando, tempo, tocarOuPausar, avancar, parar }}>
+    <ContextoPlayer.Provider value={{ tocandoId, tocando, tempo, duracaoDoArquivo, tocarOuPausar, avancar, parar }}>
       {children}
     </ContextoPlayer.Provider>
   );

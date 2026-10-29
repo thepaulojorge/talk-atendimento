@@ -142,6 +142,7 @@ function ChatAberto({ conversa }) {
   }
 
   function salvarEdicao(texto) {
+    const saiuPeloWhatsapp = acharMsg(edicao.msgId)?.whatsapp;
     despachar({
       tipo: "editarMensagem",
       conversaId: conversa.id,
@@ -151,7 +152,8 @@ function ChatAberto({ conversa }) {
       auditoriaId: novoId("aud"),
     });
     setEdicao(null);
-    avisar(despachar, "Mensagem editada");
+    // A edição fica no sistema; o que chegou no celular do cliente não muda
+    avisar(despachar, saiuPeloWhatsapp ? "Editada no sistema. No WhatsApp do cliente, continua a versão original." : "Mensagem editada");
   }
 
   function apagar() {
@@ -243,8 +245,9 @@ function ChatAberto({ conversa }) {
       ? conversa.participantes.join(", ")
       : buscarPorId(estado.contatos, conversa.contatoId)?.numero || "";
   const etiquetas = (conversa.etiquetas || []).map((id) => buscarPorId(estado.etiquetas, id)).filter(Boolean);
-  // Por qual número da empresa esta conversa acontece (só importa com mais de uma linha)
-  const linha = estado.linhas.length > 1 ? buscarPorId(estado.linhas, conversa.linhaId) : null;
+  // Por qual número da empresa esta conversa acontece (o nome só importa com mais de uma linha)
+  const linhaDaConversa = buscarPorId(estado.linhas, conversa.linhaId);
+  const linha = estado.linhas.length > 1 ? linhaDaConversa : null;
 
   return (
     <section className="chat__aberto">
@@ -273,6 +276,8 @@ function ChatAberto({ conversa }) {
           <p className="chat__detalhe">
             {detalhe} · {responsavel}
             {linha && ` · Linha ${linha.sigla}`}
+            {/* B7: a linha está ligada ao WhatsApp de verdade (o que sai daqui chega no celular do cliente) */}
+            {linhaDaConversa?.whatsapp && conversa.tipo === "contato" && " · via WhatsApp"}
           </p>
         </div>
 
@@ -351,7 +356,9 @@ function ChatAberto({ conversa }) {
           texto={
             msgApagando.tipo === "nota"
               ? "A nota será apagada para toda a equipe."
-              : "A mensagem será apagada aqui para toda a equipe. O cliente pode já ter visto o conteúdo."
+              : msgApagando.whatsapp
+                ? "A mensagem será apagada no sistema, para toda a equipe. No celular do cliente ela CONTINUA aparecendo: o sistema não apaga mensagens que já saíram pelo WhatsApp."
+                : "A mensagem será apagada aqui para toda a equipe. O cliente pode já ter visto o conteúdo."
           }
           rotulo="Apagar"
           perigo

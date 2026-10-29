@@ -57,8 +57,9 @@ export default function DialogoConfiguracoes({ aoFechar }) {
     return estacoes?.find((e) => e.id === linha.estacaoId)?.nome || "Linha sem estação";
   }
 
-  function trocarNumero(linhaId, numero) {
-    setLinhas((atuais) => atuais.map((l) => (l.id === linhaId ? { ...l, numero } : l)));
+  // Troca UM campo de uma linha ("numero" ou "whatsappId"), sem mexer no resto
+  function mudarLinha(linhaId, campo, valor) {
+    setLinhas((atuais) => atuais.map((l) => (l.id === linhaId ? { ...l, [campo]: valor } : l)));
     setErro("");
   }
 
@@ -83,7 +84,7 @@ export default function DialogoConfiguracoes({ aoFechar }) {
         marca: { nome: nomeLimpo },
         estacoes: estacoes.map((e) => ({ id: e.id, escala: e.escala })),
         // O servidor tira os espaços, o "+" e o "-": fica só o número
-        linhas: linhas.map((l) => ({ id: l.id, numero: l.numero })),
+        linhas: linhas.map((l) => ({ id: l.id, numero: l.numero, whatsappId: (l.whatsappId ?? "").trim() })),
       });
       await recarregar(); // o nome novo, a escala e os números aparecem no app
       avisar(despachar, "Configurações salvas");
@@ -179,20 +180,44 @@ export default function DialogoConfiguracoes({ aoFechar }) {
                 Cada estação atende por um número. Supervisão e diretoria têm o número exclusivo delas. Use o DDD e o 55
                 do Brasil.
               </p>
+              <p className="config__dica">
+                <strong>ID na Meta:</strong> para a linha funcionar com o WhatsApp de verdade, cole o &quot;ID do número de
+                telefone&quot; do painel da Meta (WhatsApp &gt; Configuração da API). Vazio: a linha funciona em modo
+                simulado.
+              </p>
               <div className="config__numeros">
                 {linhas.map((linha) => (
-                  <label key={linha.id} className="config__campo">
-                    <span>{nomeDaLinha(linha)}</span>
-                    {/* type="tel": no celular, abre o teclado de números */}
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="off"
-                      placeholder="+55 21 99999-0001"
-                      value={linha.numero}
-                      onChange={(evento) => trocarNumero(linha.id, evento.target.value)}
-                    />
-                  </label>
+                  /* fieldset + legend: agrupa os dois campos da mesma linha
+                     (o leitor de tela anuncia "Estação 01, Número...") */
+                  <fieldset key={linha.id} className="config__linha">
+                    <legend>
+                      {nomeDaLinha(linha)}
+                      {linha.whatsappId?.trim() && <span className="selo selo--whatsapp">WhatsApp</span>}
+                    </legend>
+                    <label className="config__campo">
+                      <span>Número</span>
+                      {/* type="tel": no celular, abre o teclado de números */}
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="off"
+                        placeholder="+55 21 99999-0001"
+                        value={linha.numero}
+                        onChange={(evento) => mudarLinha(linha.id, "numero", evento.target.value)}
+                      />
+                    </label>
+                    <label className="config__campo">
+                      <span>ID na Meta (opcional)</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="Ex.: 106540352242922"
+                        value={linha.whatsappId ?? ""}
+                        onChange={(evento) => mudarLinha(linha.id, "whatsappId", evento.target.value)}
+                      />
+                    </label>
+                  </fieldset>
                 ))}
               </div>
             </section>
