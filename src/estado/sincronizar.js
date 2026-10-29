@@ -39,16 +39,20 @@ export function pedidoDaAcao(acao, estado) {
 
     // "Alternar" vira o valor FINAL: { fixada: true }. Repetir o pedido não desfaz nada
     case "alternarFixada":
-      return conversa && { metodo: "PATCH", caminho: `/conversas/${de(acao.id)}`, corpo: { fixada: !conversa.fixadaEm } };
+      return (
+        conversa && { metodo: "PATCH", caminho: `/conversas/${de(acao.id)}`, corpo: { fixada: !conversa.fixadaEm } }
+      );
 
     case "alternarArquivada":
-      return conversa && { metodo: "PATCH", caminho: `/conversas/${de(acao.id)}`, corpo: { arquivada: !conversa.arquivada } };
+      return (
+        conversa && { metodo: "PATCH", caminho: `/conversas/${de(acao.id)}`, corpo: { arquivada: !conversa.arquivada } }
+      );
 
     /* Iniciar pelos Contatos: a mesma regra do reducer. Já existe conversa
        com o contato nesta linha? Só desarquiva (se precisar). Senão, cria */
     case "iniciarConversa": {
       const existente = estado.conversas.find(
-        (c) => c.tipo === "contato" && c.contatoId === acao.contatoId && c.linhaId === acao.linhaId
+        (c) => c.tipo === "contato" && c.contatoId === acao.contatoId && c.linhaId === acao.linhaId,
       );
       if (existente) {
         return existente.arquivada
@@ -62,8 +66,11 @@ export function pedidoDaAcao(acao, estado) {
       };
     }
 
+    /* auditoriaId: o registro da auditoria que a tela JÁ mostrou. Mandando
+       o mesmo id, o servidor grava com ele, e o aviso ao vivo (B6) não
+       aparece duplicado na tela da supervisão */
     case "excluirConversa":
-      return { metodo: "DELETE", caminho: `/conversas/${de(acao.id)}` };
+      return { metodo: "DELETE", caminho: `/conversas/${de(acao.id)}`, corpo: { auditoriaId: acao.auditoriaId } };
 
     /* Texto, nota, áudio, arquivo e encaminhada: tudo pelo mesmo caminho.
        Na tela, a mensagem guarda o arquivo inteiro ({ id, nome, tipo, tamanho });
@@ -78,16 +85,27 @@ export function pedidoDaAcao(acao, estado) {
     }
 
     case "editarMensagem":
-      return { metodo: "PATCH", caminho: `/mensagens/${de(acao.mensagemId)}`, corpo: { texto: acao.texto } };
+      return {
+        metodo: "PATCH",
+        caminho: `/mensagens/${de(acao.mensagemId)}`,
+        corpo: { texto: acao.texto, auditoriaId: acao.auditoriaId },
+      };
 
     case "apagarMensagem":
-      return { metodo: "DELETE", caminho: `/mensagens/${de(acao.mensagemId)}` };
+      return {
+        metodo: "DELETE",
+        caminho: `/mensagens/${de(acao.mensagemId)}`,
+        corpo: { auditoriaId: acao.auditoriaId },
+      };
 
     // A conversa já tem a etiqueta? Então o clique TIRA (DELETE); senão, COLOCA (PUT)
     case "alternarEtiqueta": {
       if (!conversa) return null;
       const tem = (conversa.etiquetas || []).includes(acao.etiquetaId);
-      return { metodo: tem ? "DELETE" : "PUT", caminho: `/conversas/${de(conversa.id)}/etiquetas/${de(acao.etiquetaId)}` };
+      return {
+        metodo: tem ? "DELETE" : "PUT",
+        caminho: `/conversas/${de(conversa.id)}/etiquetas/${de(acao.etiquetaId)}`,
+      };
     }
 
     case "renomearEtiqueta":

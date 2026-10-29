@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { io } from "socket.io-client";
 import { ContextoEstado } from "./contexto.js";
 import { reducer, estadoInicial } from "./reducer.js";
 import { avisar } from "./avisos.js";
 import { pedidoDaAcao } from "./sincronizar.js";
 import { apagarCopiasAntigas, lerRascunhos, lerSessao, salvarRascunhos, salvarSessao } from "./armazenamento.js";
-import { buscarConfiguracaoPublica, buscarDados, gravar, restaurarDemonstracao } from "../api.js";
+import { API_URL, buscarConfiguracaoPublica, buscarDados, gravar, restaurarDemonstracao } from "../api.js";
+import { nomeDaConversa } from "../utilidades/conversas.js";
 
 const ATRASO_SALVAR_MS = 300;
 
@@ -60,9 +62,21 @@ export default function ProvedorEstado({ children }) {
      .then(), ou seja, só começa quando o anterior terminar */
   const fila = useRef(Promise.resolve());
 
+  /* TEMPO REAL x FILA: cada pedido que gravamos volta como aviso ao vivo
+     (o servidor manda a conversa atualizada para todos, inclusive para nós).
+     Problema: mandou duas mensagens seguidas? O aviso da 1ª pode chegar
+     ANTES de a 2ª ser gravada, e a 2ª "sumiria" da tela por um instante.
+     Solução: enquanto houver pedidos de uma conversa na fila, os avisos dela
+     ficam ADIADOS; quando o último termina, vale o aviso mais recente */
+  const pendentes = useRef(new Map()); // conversaId -> quantos pedidos dela estão na fila
+  const adiadas = useRef(new Map()); // conversaId -> a versão mais recente que chegou nesse meio-tempo
+  const aplicarConversa = useRef(() => {}); // definida mais abaixo (precisa do "despachar")
+
   const enfileirar = useCallback(
-    (pedido) => {
+    (pedido, conversaId) => {
       const token = estadoAtual.current.sessao?.token;
+      if (conversaId) pendentes.current.set(conversaId, (pendentes.current.get(conversaId) ?? 0) + 1);
+
       fila.current = fila.current
         .then(() => gravar(token, pedido))
         .catch(async (erro) => {
@@ -79,9 +93,21 @@ export default function ProvedorEstado({ children }) {
           } catch {
             // sem internet nem para recarregar: o aviso já foi dado
           }
+        })
+        .finally(() => {
+          // Terminou o último pedido desta conversa? Aplica o aviso que ficou esperando
+          if (!conversaId) return;
+          const restantes = pendentes.current.get(conversaId) - 1;
+          if (restantes > 0) return pendentes.current.set(conversaId, restantes);
+          pendentes.current.delete(conversaId);
+          const adiada = adiadas.current.get(conversaId);
+          if (adiada) {
+            adiadas.current.delete(conversaId);
+            aplicarConversa.current(adiada);
+          }
         });
     },
-    [recarregar]
+    [recarregar],
   );
 
   /* O despachar que os componentes usam. Os componentes NÃO mudaram nada:
@@ -97,10 +123,79 @@ export default function ProvedorEstado({ children }) {
       const antes = estadoAtual.current;
       const pedido = antes.atendenteLogadoId ? pedidoDaAcao(acao, antes) : null;
       despacharNaTela(acao);
-      if (pedido && reducer(antes, acao) !== antes) enfileirar(pedido);
+      // acao.conversaId ?? acao.id: de QUAL conversa é o pedido (para os avisos adiados)
+      if (pedido && reducer(antes, acao) !== antes) enfileirar(pedido, acao.conversaId ?? acao.id);
     },
-    [enfileirar]
+    [enfileirar],
   );
+
+  /* Chegou uma conversa atualizada pelo servidor: troca na tela.
+     Se nela tem mensagem NOVA do cliente:
+     - conversa aberta: você já está vendo, então ela é marcada como lida
+     - fechada: o aviso "Nova mensagem de Fulano" aparece */
+  useEffect(() => {
+    aplicarConversa.current = (conversa) => {
+      const antes = estadoAtual.current;
+      const antiga = antes.conversas.find((c) => c.id === conversa.id);
+      const jaVistas = new Set(antiga?.mensagens.map((m) => m.id));
+      const novas = conversa.mensagens.filter((m) => m.direcao === "recebida" && !m.lida && !jaVistas.has(m.id));
+
+      despacharNaTela({ tipo: "conversaDoServidor", conversa });
+      if (novas.length === 0) return;
+
+      if (antes.conversaAbertaId === conversa.id) {
+        despacharNaTela({ tipo: "marcarLida", id: conversa.id });
+        enfileirar(
+          { metodo: "PATCH", caminho: `/conversas/${encodeURIComponent(conversa.id)}`, corpo: { lida: true } },
+          conversa.id,
+        );
+      } else {
+        avisar(despacharNaTela, `Nova mensagem de ${nomeDaConversa(conversa, antes.contatos)}`);
+      }
+    };
+  }, [enfileirar]);
+
+  /* ---------- Tempo real (B6): a conexão com o servidor ----------
+     Enquanto alguém está logado, o navegador mantém uma conexão ABERTA
+     com o servidor (Socket.io). O servidor avisa por ela o que mudou, e
+     cada aviso vira uma ação do reducer. Saiu (token some)? A limpeza do
+     efeito desliga a conexão */
+  const token = estado.sessao?.token;
+  useEffect(() => {
+    if (!token) return;
+    // O token vai no "auth": o servidor só aceita a conexão de quem está logado
+    const conexao = io(API_URL, { auth: { token } });
+
+    /* A conexão caiu e voltou (internet, servidor reiniciando)? Os avisos
+       desse intervalo se perderam: buscamos tudo de novo para não ficar para trás */
+    let primeiraVez = true;
+    conexao.on("connect", () => {
+      if (!primeiraVez) recarregar().catch(() => {});
+      primeiraVez = false;
+    });
+
+    // "sessao" = o servidor recusou o token (vencido): volta para o login
+    conexao.on("connect_error", (erro) => {
+      if (erro.message !== "sessao") return; // outros erros: o Socket.io tenta de novo sozinho
+      conexao.disconnect();
+      despacharNaTela({ tipo: "sair" });
+      avisar(despacharNaTela, "Sua sessão expirou. Entre de novo.");
+    });
+
+    conexao.on("conversa", (conversa) => {
+      // Tem pedido desta conversa na fila? Guarda para depois (veja "pendentes", lá em cima)
+      if (pendentes.current.get(conversa.id) > 0) adiadas.current.set(conversa.id, conversa);
+      else aplicarConversa.current(conversa);
+    });
+    conexao.on("conversaExcluida", ({ id }) => despacharNaTela({ tipo: "conversaExcluidaNoServidor", id }));
+    conexao.on("auditoria", (registro) => despacharNaTela({ tipo: "auditoriaDoServidor", registro }));
+    conexao.on("etiquetas", (etiquetas) => despacharNaTela({ tipo: "etiquetasDoServidor", etiquetas }));
+    conexao.on("contato", (contato) => despacharNaTela({ tipo: "contatoDoServidor", contato }));
+    conexao.on("estacoes", (estacoes) => despacharNaTela({ tipo: "estacoesDoServidor", estacoes }));
+    conexao.on("recarregar", () => recarregar().catch(() => {}));
+
+    return () => conexao.disconnect();
+  }, [token, recarregar]);
 
   /* A tela de login chama esta função com a resposta do servidor
      ({ token, sessao }). O token passa a morar DENTRO da sessão */
@@ -110,7 +205,7 @@ export default function ProvedorEstado({ children }) {
       const nome = dados.atendentes.find((a) => a.id === sessao.atendenteId)?.nome;
       avisar(despacharNaTela, `Olá, ${nome}! Bom atendimento.`);
     },
-    [carregarComSessao]
+    [carregarComSessao],
   );
 
   /* ---------- Ao abrir o app (uma vez) ----------

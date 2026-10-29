@@ -87,7 +87,9 @@ function marcarComoLida(conversa) {
   return {
     ...conversa,
     marcadaNaoLida: false,
-    mensagens: conversa.mensagens.map((msg) => (msg.direcao === "recebida" && !msg.lida ? { ...msg, lida: true } : msg)),
+    mensagens: conversa.mensagens.map((msg) =>
+      msg.direcao === "recebida" && !msg.lida ? { ...msg, lida: true } : msg,
+    ),
   };
 }
 
@@ -172,7 +174,7 @@ export function reducer(estado, acao) {
     case "iniciarConversa": {
       const contatos = acao.novoContato ? [...estado.contatos, acao.novoContato] : estado.contatos;
       const existente = estado.conversas.find(
-        (c) => c.tipo === "contato" && c.contatoId === acao.contatoId && c.linhaId === acao.linhaId
+        (c) => c.tipo === "contato" && c.contatoId === acao.contatoId && c.linhaId === acao.linhaId,
       );
 
       let conversas;
@@ -243,7 +245,7 @@ export function reducer(estado, acao) {
     case "marcarNaoLida":
       return fecharSeAberta(
         { ...estado, conversas: mudarConversa(estado.conversas, acao.id, (c) => ({ ...c, marcadaNaoLida: true })) },
-        acao.id
+        acao.id,
       );
 
     /* Arquivar também desafixa (no WhatsApp é igual) e fecha a conversa.
@@ -272,9 +274,7 @@ export function reducer(estado, acao) {
         .map((m) => ({
           quem: quemEscreveu(m, conversa, estado),
           quando: m.horario,
-          texto:
-            conteudoParaRegistro(m) +
-            (m.apagada ? " (já estava apagada)" : ""),
+          texto: conteudoParaRegistro(m) + (m.apagada ? " (já estava apagada)" : ""),
         }));
 
       const rascunhos = { ...estado.rascunhos };
@@ -300,7 +300,7 @@ export function reducer(estado, acao) {
             },
           ],
         },
-        acao.id
+        acao.id,
       );
     }
 
@@ -354,7 +354,7 @@ export function reducer(estado, acao) {
         return acrescentar(
           { ...conversa, atendenteId, status },
           ...eventos.map((texto, i) => evento(`${acao.id}-e${i}`, texto, acao.agora)),
-          novaMensagem
+          novaMensagem,
         );
       });
 
@@ -458,8 +458,8 @@ export function reducer(estado, acao) {
         conversas: mudarConversa(estado.conversas, acao.id, (c) =>
           acrescentar(
             { ...c, atendenteId: estado.atendenteLogadoId },
-            evento(acao.eventoId, `${nomeDoLogado(estado)} assumiu a conversa`, acao.agora)
-          )
+            evento(acao.eventoId, `${nomeDoLogado(estado)} assumiu a conversa`, acao.agora),
+          ),
         ),
       };
     }
@@ -476,7 +476,7 @@ export function reducer(estado, acao) {
       return {
         ...estado,
         conversas: mudarConversa(estado.conversas, acao.id, (c) =>
-          acrescentar({ ...c, atendenteId: acao.destinoId }, evento(acao.eventoId, texto, acao.agora))
+          acrescentar({ ...c, atendenteId: acao.destinoId }, evento(acao.eventoId, texto, acao.agora)),
         ),
       };
     }
@@ -492,14 +492,14 @@ export function reducer(estado, acao) {
       return {
         ...estado,
         conversas: mudarConversa(estado.conversas, acao.id, (c) =>
-          acrescentar({ ...c, status: resolvendo ? "resolvida" : "aberta" }, evento(acao.eventoId, texto, acao.agora))
+          acrescentar({ ...c, status: resolvendo ? "resolvida" : "aberta" }, evento(acao.eventoId, texto, acao.agora)),
         ),
       };
     }
 
     /* Mensagem do cliente chegando: { conversaId, id, agora, texto, autor }
-       ⚠️ Por enquanto só a simulação usa. Com o backend, quem despacha
-       esta ação é o aviso do WhatsApp (pelo Socket.io) */
+       ⚠️ Só a SIMULAÇÃO usa (modo demonstração). As mensagens de verdade
+       chegam pelo tempo real, na ação "conversaDoServidor" */
     case "receberMensagem": {
       const conversa = buscarPorId(estado.conversas, acao.conversaId);
       if (!conversa) return estado;
@@ -524,12 +524,55 @@ export function reducer(estado, acao) {
         ...estado,
         conversas: mudarConversa(estado.conversas, conversa.id, (c) =>
           // Arquivada continua arquivada (como no WhatsApp); o atalho mostra as não lidas
-          acrescentar({ ...c, status: "aberta" }, ...novas)
+          acrescentar({ ...c, status: "aberta" }, ...novas),
         ),
         // Aviso só se você NÃO estiver olhando para a conversa
-        aviso: aberta ? estado.aviso : { id: acao.id, texto: `Nova mensagem de ${nomeDaConversa(conversa, estado.contatos)}` },
+        aviso: aberta
+          ? estado.aviso
+          : { id: acao.id, texto: `Nova mensagem de ${nomeDaConversa(conversa, estado.contatos)}` },
       };
     }
+
+    /* ---------- Tempo real (B6): avisos que chegam do servidor ----------
+       Outra pessoa mudou algo (ou o servidor confirmou o que VOCÊ fez):
+       o servidor manda o dado já atualizado, e a tela troca pelo novo */
+
+    // A conversa inteira, atualizada: troca a antiga (ou entra, se for nova)
+    case "conversaDoServidor": {
+      const existe = estado.conversas.some((c) => c.id === acao.conversa.id);
+      return {
+        ...estado,
+        conversas: existe
+          ? mudarConversa(estado.conversas, acao.conversa.id, () => acao.conversa)
+          : [...estado.conversas, acao.conversa],
+      };
+    }
+
+    // Alguém excluiu a conversa: some da lista (e fecha, se estava aberta)
+    case "conversaExcluidaNoServidor": {
+      if (!estado.conversas.some((c) => c.id === acao.id)) return estado;
+      const rascunhos = { ...estado.rascunhos };
+      delete rascunhos[acao.id];
+      return fecharSeAberta(
+        { ...estado, rascunhos, conversas: estado.conversas.filter((c) => c.id !== acao.id) },
+        acao.id,
+      );
+    }
+
+    // Registro novo na auditoria (o seu já está na tela, com o mesmo id: não duplica)
+    case "auditoriaDoServidor":
+      if (estado.auditoria.some((r) => r.id === acao.registro.id)) return estado;
+      return { ...estado, auditoria: [...estado.auditoria, acao.registro] };
+
+    case "etiquetasDoServidor":
+      return { ...estado, etiquetas: acao.etiquetas };
+
+    case "contatoDoServidor":
+      if (estado.contatos.some((c) => c.id === acao.contato.id)) return estado;
+      return { ...estado, contatos: [...estado.contatos, acao.contato] };
+
+    case "estacoesDoServidor":
+      return { ...estado, estacoes: acao.estacoes };
 
     /* ---------- Login ---------- */
 
