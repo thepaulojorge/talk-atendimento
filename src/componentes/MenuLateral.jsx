@@ -51,6 +51,7 @@ export default function MenuLateral() {
   }
 
   const irPara = (secao) => despachar({ tipo: "irPara", secao });
+  const podeRestaurar = estado.modoDemonstracao && podeConfigurar(estado);
 
   // De onde você entrou: "Estação 01 · Turno da manhã" (ou o papel, nas contas pessoais)
   const onde = descreverSessao(estado.sessao, estado) || PAPEIS[papelDe(estado, estado.atendenteLogadoId)];
@@ -131,9 +132,10 @@ export default function MenuLateral() {
           titulo={`${atendente.nome} · ${onde}`}
           opcoes={[
             { id: "sair", rotulo: "Sair", icone: "sair", acao: sair },
-            // Ferramenta de teste, só no modo demonstração: volta o banco ao exemplo
-            estado.modoDemonstracao && { divisoria: true },
-            estado.modoDemonstracao && {
+            /* Ferramenta de teste: volta o banco ao exemplo. Só no modo
+               demonstração e só para a diretoria (o servidor confere também) */
+            podeRestaurar && { divisoria: true },
+            podeRestaurar && {
               id: "restaurar",
               rotulo: "↺ Restaurar dados de exemplo",
               teste: true,
