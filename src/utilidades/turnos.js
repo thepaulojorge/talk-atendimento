@@ -7,8 +7,8 @@ export function turnoDe(data) {
   const hora = data.getHours();
   return TURNOS.find((t) =>
     t.inicio < t.fim
-      ? hora >= t.inicio && hora < t.fim // turno normal: 6h às 14h
-      : hora >= t.inicio || hora < t.fim // passa da meia-noite: 22h às 6h
+      ? hora >= t.inicio && hora < t.fim // turno normal: 7h às 15h
+      : hora >= t.inicio || hora < t.fim // passa da meia-noite: 23h às 7h
   );
 }
 

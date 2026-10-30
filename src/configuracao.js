@@ -11,9 +11,9 @@ export const MARCA_PADRAO = {
 export const LIMITE_FIXADAS = 3;
 
 /* Os 3 turnos do dia. "fim" é exclusivo: às 14:00 já é a tarde.
-   O turno da noite passa da meia-noite (22h às 6h) */
+   O turno da noite passa da meia-noite (23h às 7h) */
 export const TURNOS = [
-  { id: "manha", nome: "Manhã", inicio: 6, fim: 14 },
-  { id: "tarde", nome: "Tarde", inicio: 14, fim: 22 },
-  { id: "noite", nome: "Noite", inicio: 22, fim: 6 },
+  { id: "manha", nome: "Manhã", inicio: 7, fim: 15 },
+  { id: "tarde", nome: "Tarde", inicio: 15, fim: 23 },
+  { id: "noite", nome: "Noite", inicio: 23, fim: 7 },
 ];
