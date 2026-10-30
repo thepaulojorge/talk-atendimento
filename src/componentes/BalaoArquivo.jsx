@@ -1,29 +1,42 @@
+import { useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
 import { useArquivo } from "../hooks/useArquivo.js";
 import { baixarArquivo, ehImagem, enderecoDoArquivo, extensao, formatarTamanho } from "../utilidades/arquivos.js";
 import Icone from "./Icone.jsx";
+import VisualizadorFoto from "./VisualizadorFoto.jsx";
 
 /* O conteúdo de uma mensagem com ARQUIVO:
-   - foto: a própria imagem (clique abre em tamanho real, numa aba nova)
+   - foto: a própria imagem (clique abre em tamanho grande, por cima da conversa)
+   - figurinha: pequena e sem clique, como no WhatsApp
    - documento: um cartão com o tipo, o nome, o tamanho e o botão de baixar */
 export default function BalaoArquivo({ arquivo }) {
   if (!arquivo) return <div className="anexo anexo--indisponivel">📎 Arquivo indisponível</div>;
   return ehImagem(arquivo) ? <Foto arquivo={arquivo} /> : <Documento arquivo={arquivo} />;
 }
 
+/* Figurinha do WhatsApp: o servidor dá a ela um nome que começa com
+   "sticker-" (ver whatsapp/receber.js na API). É assim que a reconhecemos */
+const ehFigurinha = (arquivo) => arquivo.nome.startsWith("sticker-");
+
 function Foto({ arquivo }) {
   // A foto é baixada assim que a mensagem aparece (como no WhatsApp)
   const { endereco, erro } = useArquivo(arquivo.id);
+  const [ampliada, setAmpliada] = useState(false);
 
   if (erro) return <div className="anexo anexo--indisponivel">🖼️ {erro}</div>;
   if (!endereco) return <div className="anexo-foto anexo-foto--carregando" aria-label="Carregando foto" />;
 
+  if (ehFigurinha(arquivo)) return <img className="anexo-figurinha" src={endereco} alt="Figurinha" />;
+
   return (
-    // Um <a> com target="_blank": abre a foto inteira numa aba nova
-    <a className="anexo-foto" href={endereco} target="_blank" rel="noreferrer" title={arquivo.nome}>
-      <img src={endereco} alt={arquivo.nome} />
-    </a>
+    <>
+      {/* Um <button>: dá para abrir com o mouse, com o dedo ou com o teclado (Enter) */}
+      <button type="button" className="anexo-foto" title="Ver foto" onClick={() => setAmpliada(true)}>
+        <img src={endereco} alt={arquivo.nome} />
+      </button>
+      {ampliada && <VisualizadorFoto arquivo={arquivo} endereco={endereco} aoFechar={() => setAmpliada(false)} />}
+    </>
   );
 }
 

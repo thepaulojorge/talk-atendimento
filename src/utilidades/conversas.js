@@ -48,9 +48,10 @@ export function resumoDaMensagem(msg) {
   return msg.texto;
 }
 
-// "📷 Foto" ou "📄 orcamento.pdf"
+// "📷 Foto", "💟 Figurinha" ou "📄 orcamento.pdf"
 function descreverArquivo(msg) {
   if (!msg.arquivo) return "📎 Arquivo";
+  if (msg.arquivo.nome.startsWith("sticker-")) return "💟 Figurinha";
   return msg.arquivo.tipo.startsWith("image/") ? "📷 Foto" : `📄 ${msg.arquivo.nome}`;
 }
 
