@@ -1,8 +1,10 @@
 import { useEstado } from "../estado/useEstado.js";
 import { useMenuDeContexto } from "../hooks/useMenuDeContexto.js";
+import { LIMITE_ESPERA_MIN } from "../configuracao.js";
 import {
   buscarPorId,
   contarNaoLidas,
+  esperandoDesde,
   estaResolvida,
   nomeDaConversa,
   ultimaMensagem,
@@ -16,7 +18,9 @@ import Icone from "./Icone.jsx";
    a lógica é a mesma, mas o HTML aparece escrito do jeito que vai ficar */
 /* Props novas: termoBusca (para a prévia com 🔍) e os avisos de mouse,
    que o painel usa para o cartão de prévia */
-export default function ItemConversa({ conversa, termoBusca = "", selecionada, aoEntrarMouse, aoSairMouse, aoAbrirMenu }) {
+/* agora: a hora atual, que a lista passa (ver hooks/useAgora.js).
+   Vem de fora para que haja UM relógio só, e não um por conversa */
+export default function ItemConversa({ conversa, termoBusca = "", agora, selecionada, aoEntrarMouse, aoSairMouse, aoAbrirMenu }) {
   const { estado, despachar } = useEstado();
   // O mesmo hook das mensagens: botão direito ou dedo pressionado
   const eventosMenu = useMenuDeContexto((posicao) => aoAbrirMenu?.(conversa.id, posicao));
@@ -25,6 +29,12 @@ export default function ItemConversa({ conversa, termoBusca = "", selecionada, a
   const naoLidas = contarNaoLidas(conversa);
   const msg = ultimaMensagem(conversa);
   const resolvida = estaResolvida(conversa);
+
+  /* ALERTA DE ESPERA: há quantos minutos a mensagem não lida mais antiga
+     chegou? Passou do limite (10 min), a bolinha fica vermelha */
+  const desde = esperandoDesde(conversa);
+  const minutosEsperando = desde && agora ? Math.floor((agora - desde) / 60_000) : 0;
+  const atrasada = naoLidas > 0 && minutosEsperando >= LIMITE_ESPERA_MIN;
 
   // Classes conforme a situação (mesmas regras de antes)
   const classes = [
@@ -109,7 +119,11 @@ export default function ItemConversa({ conversa, termoBusca = "", selecionada, a
           {conversa.fixadaEm && <Icone nome="pino" className="conversa__fixada" />}
           {/* Operador ternário: "condição ? isto : aquilo" */}
           {naoLidas > 0 ? (
-            <span className="conversa__badge" aria-label={`${naoLidas} mensagens não lidas`}>
+            <span
+              className={`conversa__badge${atrasada ? " conversa__badge--atrasada" : ""}`}
+              aria-label={`${naoLidas} mensagens não lidas${atrasada ? `, sem resposta há ${descreverEspera(minutosEsperando)}` : ""}`}
+              title={atrasada ? `Sem resposta há ${descreverEspera(minutosEsperando)}` : undefined}
+            >
               {naoLidas}
             </span>
           ) : (
@@ -119,4 +133,12 @@ export default function ItemConversa({ conversa, termoBusca = "", selecionada, a
       </div>
     </li>
   );
+}
+
+// 12 -> "12 min"; 75 -> "1 h 15 min"; 120 -> "2 h"
+function descreverEspera(minutos) {
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto ? `${horas} h ${resto} min` : `${horas} h`;
 }

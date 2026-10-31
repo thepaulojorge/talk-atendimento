@@ -566,9 +566,31 @@ export function reducer(estado, acao) {
     case "etiquetasDoServidor":
       return { ...estado, etiquetas: acao.etiquetas };
 
-    case "contatoDoServidor":
-      if (estado.contatos.some((c) => c.id === acao.contato.id)) return estado;
-      return { ...estado, contatos: [...estado.contatos, acao.contato] };
+    /* Contato novo OU editado (nome e número): se já existe, é TROCADO
+       pela versão nova; se não, entra na lista */
+    case "contatoDoServidor": {
+      const existe = estado.contatos.some((c) => c.id === acao.contato.id);
+      const contatos = existe
+        ? estado.contatos.map((c) => (c.id === acao.contato.id ? acao.contato : c))
+        : [...estado.contatos, acao.contato];
+      return { ...estado, contatos };
+    }
+
+    // Respostas rápidas: a lista inteira, do jeito que está no banco
+    case "respostasDoServidor":
+      return { ...estado, respostasRapidas: acao.respostas };
+
+    /* Você salvou uma resposta (o servidor já confirmou). Sai a versão com
+       o atalho ANTIGO (pode ter mudado) e entra a nova */
+    case "respostaSalva": {
+      const outras = estado.respostasRapidas.filter(
+        (r) => r.atalho !== acao.atalhoAntigo && r.atalho !== acao.resposta.atalho,
+      );
+      return { ...estado, respostasRapidas: [...outras, acao.resposta] };
+    }
+
+    case "respostaApagada":
+      return { ...estado, respostasRapidas: estado.respostasRapidas.filter((r) => r.atalho !== acao.atalho) };
 
     case "estacoesDoServidor":
       return { ...estado, estacoes: acao.estacoes };

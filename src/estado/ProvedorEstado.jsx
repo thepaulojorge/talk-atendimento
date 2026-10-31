@@ -192,6 +192,7 @@ export default function ProvedorEstado({ children }) {
     conexao.on("etiquetas", (etiquetas) => despacharNaTela({ tipo: "etiquetasDoServidor", etiquetas }));
     conexao.on("contato", (contato) => despacharNaTela({ tipo: "contatoDoServidor", contato }));
     conexao.on("estacoes", (estacoes) => despacharNaTela({ tipo: "estacoesDoServidor", estacoes }));
+    conexao.on("respostas", (respostas) => despacharNaTela({ tipo: "respostasDoServidor", respostas }));
     conexao.on("recarregar", () => recarregar().catch(() => {}));
 
     return () => conexao.disconnect();

@@ -17,7 +17,7 @@ import DialogoConfiguracoes from "./DialogoConfiguracoes.jsx";
    No computador fica na esquerda, em pé; no celular vira uma barra
    no rodapé (o CSS cuida disso, o componente é o mesmo).
 
-   Em cima, as SEÇÕES: Conversas, Contatos e Supervisão.
+   Em cima, as SEÇÕES: Conversas, Contatos, Respostas rápidas, Estações e Supervisão.
    Embaixo, as ferramentas: Configurações, tema e a sua conta. */
 export default function MenuLateral() {
   const { estado, despachar, restaurarExemplo } = useEstado();
@@ -72,6 +72,14 @@ export default function MenuLateral() {
           rotulo="Contatos"
           ativo={estado.secao === "contatos"}
           aoClicar={() => irPara("contatos")}
+        />
+
+        {/* Respostas rápidas: TODOS podem criar, editar e apagar */}
+        <BotaoMenu
+          icone="raio"
+          rotulo="Respostas rápidas"
+          ativo={estado.secao === "respostas"}
+          aoClicar={() => irPara("respostas")}
         />
 
         {/* Só quem entrou pelo e-mail de uma ESTAÇÃO pode puxar outras.

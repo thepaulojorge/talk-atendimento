@@ -3,6 +3,7 @@ import { useEstado } from "../estado/useEstado.js";
 import { contarNaoLidas, contarTotalNaoLidas, nomeDaConversa, ordenarConversas } from "../utilidades/conversas.js";
 import { filtrarConversas } from "../utilidades/filtros.js";
 import { useAcoesConversa } from "../hooks/useAcoesConversa.jsx";
+import { useAgora } from "../hooks/useAgora.js";
 import ItemConversa from "./ItemConversa.jsx";
 import CartaoPrevia from "./CartaoPrevia.jsx";
 import MenuFlutuante from "./MenuFlutuante.jsx";
@@ -27,6 +28,8 @@ export default function PainelConversas({
 }) {
   const { estado } = useEstado();
   const total = contarTotalNaoLidas(estado.conversas);
+  // O relógio da lista (a cada 30 s): é ele que deixa a bolinha vermelha na hora certa
+  const agora = useAgora();
 
   /* Tudo DERIVADO: nada disto é guardado. A cada renderização,
      filtramos e ordenamos de novo a partir do estado */
@@ -161,6 +164,7 @@ export default function PainelConversas({
               key={conversa.id}
               conversa={conversa}
               termoBusca={busca}
+              agora={agora}
               selecionada={conversaDoMenu?.id === conversa.id}
               aoEntrarMouse={aoEntrarMouse}
               aoSairMouse={esconderPrevia}

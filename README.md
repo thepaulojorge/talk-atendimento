@@ -68,16 +68,18 @@ O sistema foi pensado para **dezenas de estações** (testado com 70), com busca
 - **Busca** por nome, número (em qualquer formato) ou trecho de mensagem
 - **Fixar** (até 3), **arquivar**, **marcar como não lida**
 - **Prévia** ao passar o mouse; **menu** no botão direito (ou segurando o dedo, no celular)
+- **Alerta de espera:** a bolinha de não lidas fica **vermelha** quando o cliente espera há **10 minutos ou mais** sem a conversa ser aberta (passe o mouse para ver há quanto tempo). O limite fica em `LIMITE_ESPERA_MIN`, no `src/configuracao.js`
 
 ### A conversa
 
 - Texto, **áudio gravado** na hora, **fotos**, **documentos** (PDF, Word, Excel…) e **áudios** do computador, pelo botão **+**
 - **Responder** citando uma mensagem, **encaminhar**, **editar** e **apagar** (as suas)
-- **Respostas rápidas:** digite `/` e escolha (`/saudacao`, `/placa`, `/boleto`…)
+- **Respostas rápidas:** digite `/` e escolha (`/saudacao`, `/placa`, `/boleto`…). **Qualquer pessoa** cria, edita e apaga pelo ícone ⚡, e a mudança chega na hora para todos. `{nome}` vira o primeiro nome do cliente e `{atendente}` o nome de quem atende
 - **Nota interna:** só a equipe vê
 - **Assumir**, **transferir** para um colega (ou devolver para a fila), **marcar como resolvida**
 - **Etiquetas** coloridas (algumas com nome personalizável)
 - ✓✓ ficam azuis quando o cliente lê
+- **Editar contato:** no "Dados do contato", o ✏️ muda o **nome** e o **número** (aceita qualquer formato: `(21) 98811-0001`, `21988110001`…)
 
 ### Estações (a "rendição")
 

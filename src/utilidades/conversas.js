@@ -30,6 +30,13 @@ export function contarNaoLidas(conversa) {
   return conversa.mensagens.filter((msg) => msg.direcao === "recebida" && !msg.lida).length;
 }
 
+/* Desde quando o cliente espera? O horário (em milissegundos) da mensagem
+   recebida NÃO LIDA mais antiga. Sem nada não lido: null */
+export function esperandoDesde(conversa) {
+  const primeira = conversa.mensagens.find((msg) => msg.direcao === "recebida" && !msg.lida);
+  return primeira ? new Date(primeira.horario).getTime() : null;
+}
+
 // Arquivadas não entram no total (igual ao WhatsApp)
 export function contarTotalNaoLidas(conversas) {
   return conversas

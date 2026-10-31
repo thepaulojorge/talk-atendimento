@@ -3,8 +3,10 @@ import { useEstado } from "../estado/useEstado.js";
 import PainelConversas from "./PainelConversas.jsx";
 import PainelContatos from "./PainelContatos.jsx";
 import PainelEstacoes from "./PainelEstacoes.jsx";
+import PainelRespostas from "./PainelRespostas.jsx";
 
-/* Coluna da esquerda: a lista de conversas ou a aba de contatos.
+/* Coluna da esquerda: a lista de conversas, ou a aba de contatos,
+   de estações ou de respostas rápidas.
    QUAL das duas aparece vem do estado global (estado.secao), porque
    quem troca é a barra de ícones, outro componente.
 
@@ -34,6 +36,8 @@ export default function BarraLateral() {
     <aside className="barra-lateral">
       {estado.secao === "estacoes" ? (
         <PainelEstacoes aoFechar={voltar} />
+      ) : estado.secao === "respostas" ? (
+        <PainelRespostas aoFechar={voltar} />
       ) : estado.secao === "contatos" ? (
         <PainelContatos
           aoFechar={voltar}

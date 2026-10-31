@@ -587,6 +587,14 @@ ol {
   place-items: center;
 }
 
+/* ALERTA DE ESPERA: não lida há 10 minutos ou mais (ver ItemConversa).
+   Vermelho nos dois temas: é uma cor com SIGNIFICADO. Um tom um pouco mais
+   escuro que o --alerta, para o número branco ficar legível (contraste 5:1) */
+.conversa__badge--atrasada {
+  background: #d32f2f;
+  color: #fff;
+}
+
 /* "Marcada como não lida": bolinha azul sem número,
    para diferenciar de mensagem nova (cor de destaque) */
 .conversa__ponto {
@@ -3513,4 +3521,194 @@ kbd {
 .transferir__lista {
   max-height: 46dvh;
   overflow-y: auto;
+}
+
+/* =========================================================
+   RESPOSTAS RÁPIDAS (painel) e FORMULÁRIOS da coluna lateral
+   (nova resposta, editar contato)
+   ========================================================= */
+.painel-respostas__acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 16px;
+}
+
+.painel-respostas__acoes .busca {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.painel-respostas .lista-contatos {
+  margin-top: 10px;
+  border-top: 1px solid var(--borda);
+}
+
+.resposta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 8px 12px 16px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.resposta--editando {
+  background: var(--fundo-ativo);
+}
+
+.resposta__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* O texto inteiro, mas no máximo 3 linhas (o resto vira "…") */
+.resposta__texto {
+  font-size: 14px;
+  color: var(--texto-suave);
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.resposta__botoes {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.resposta__botoes button,
+.painel-dados__editar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--texto-suave);
+}
+
+.resposta__botoes button:hover,
+.painel-dados__editar:hover {
+  background: var(--fundo-hover);
+  color: var(--texto);
+}
+
+/* O lápis do "Dados do contato" vai para a direita do título */
+.painel-dados__editar {
+  margin-left: auto;
+}
+
+.formulario-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 16px;
+  padding: 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--fundo-hover);
+}
+
+.formulario-lateral h3 {
+  font-size: 15px;
+}
+
+/* Dentro do painel de dados, o formulário ocupa a largura toda */
+.formulario-lateral--dados {
+  margin: 0;
+}
+
+.formulario-lateral .config__campo input,
+.formulario-lateral textarea {
+  background: var(--fundo-painel);
+}
+
+.formulario-lateral textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+/* O "/" fixo na frente do atalho, dentro da mesma caixa */
+.formulario-lateral__atalho {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo-painel);
+  color: var(--destaque);
+  font-weight: 700;
+  padding-left: 10px;
+}
+
+.formulario-lateral__atalho:focus-within {
+  outline: 2px solid var(--destaque);
+  outline-offset: -1px;
+}
+
+.formulario-lateral .formulario-lateral__atalho input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding-left: 2px;
+  background: transparent;
+}
+
+.formulario-lateral__dica {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+
+.formulario-lateral__dica code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--fundo-ativo);
+  color: var(--texto);
+}
+
+.formulario-lateral .confirmacao__botoes {
+  margin-top: 0;
+}
+
+.formulario-lateral button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* "Criar ou editar respostas rápidas", no fim da lista do "/" */
+.sugestao--gerenciar {
+  padding: 0;
+  border-top: 1px solid var(--borda);
+}
+
+.sugestao--gerenciar:hover {
+  background: none;
+}
+
+.sugestao--gerenciar button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: var(--destaque);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sugestao--gerenciar button:hover {
+  background: var(--fundo-ativo);
 }

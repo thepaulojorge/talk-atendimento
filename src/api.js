@@ -87,6 +87,18 @@ export const salvarMarca = (token, nome) => pedir("/admin/marca", { metodo: "PUT
 export const gravar = (token, { metodo, caminho, corpo }) => pedir(caminho, { metodo, corpo, token });
 
 // Modo demonstração: volta o banco inteiro aos exemplos
+/* Respostas rápidas (qualquer pessoa logada pode mexer).
+   O atalho vai no endereço: encodeURIComponent por segurança */
+export const criarResposta = (token, resposta) => pedir("/respostas", { metodo: "POST", corpo: resposta, token });
+export const salvarResposta = (token, atalhoAntigo, resposta) =>
+  pedir(`/respostas/${encodeURIComponent(atalhoAntigo)}`, { metodo: "PUT", corpo: resposta, token });
+export const apagarResposta = (token, atalho) =>
+  pedir(`/respostas/${encodeURIComponent(atalho)}`, { metodo: "DELETE", token });
+
+// Editar o nome e o número de um contato. Devolve o contato como ficou no banco
+export const salvarContato = (token, id, contato) =>
+  pedir(`/contatos/${encodeURIComponent(id)}`, { metodo: "PATCH", corpo: contato, token });
+
 export const restaurarDemonstracao = (token) => pedir("/demonstracao/restaurar", { metodo: "POST", token });
 
 /* ARQUIVOS

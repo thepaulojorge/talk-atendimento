@@ -92,6 +92,13 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
     setSugestoesFechadas(false);
   }
 
+  /* Abre o painel de respostas rápidas (na coluna da esquerda).
+     No celular, a coluna fica escondida atrás da conversa: fechamos a conversa */
+  function gerenciarRespostas() {
+    if (estreita) despachar({ tipo: "fecharConversa" });
+    despachar({ tipo: "irPara", secao: "respostas" });
+  }
+
   function escolherSugestao(resposta) {
     mudarTexto(preencherModelo(resposta.texto, conversa, estado));
     setSugestoesFechadas(true);
@@ -325,6 +332,18 @@ export default function CampoEnvio({ conversa, respondendoA, aoCancelarCitacao, 
               <span className="sugestao__texto">{preencherModelo(resposta.texto, conversa, estado)}</span>
             </li>
           ))}
+          {/* Fora das setas do teclado (não é uma "opção"): só o clique */}
+          <li className="sugestao sugestao--gerenciar" role="presentation">
+            <button
+              type="button"
+              onMouseDown={(evento) => {
+                evento.preventDefault();
+                gerenciarRespostas();
+              }}
+            >
+              <Icone nome="raio" /> Criar ou editar respostas rápidas
+            </button>
+          </li>
         </ul>
       )}
 
