@@ -10,10 +10,12 @@ export const MARCA_PADRAO = {
 // Quantas conversas podem ficar fixadas no topo ao mesmo tempo
 export const LIMITE_FIXADAS = 3;
 
-/* Os 3 turnos do dia. "fim" é exclusivo: às 14:00 já é a tarde.
-   O turno da noite passa da meia-noite (23h às 7h) */
+/* Os 3 turnos (os horários da empresa), os mesmos do servidor.
+   Quem calcula o turno de cada login é o SERVIDOR; aqui eles só servem
+   para mostrar os nomes ("Tarde") e os horários nos filtros */
 export const TURNOS = [
   { id: "manha", nome: "Manhã", inicio: 7, fim: 15 },
   { id: "tarde", nome: "Tarde", inicio: 15, fim: 23 },
   { id: "noite", nome: "Noite", inicio: 23, fim: 7 },
 ];
+

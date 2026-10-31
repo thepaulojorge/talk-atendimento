@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useEstado } from "../estado/useEstado.js";
 import { avisar } from "../estado/avisos.js";
-import { TURNOS } from "../configuracao.js";
 import {
   TIPOS_DE_ACAO,
   descricaoDaAcao,
@@ -15,9 +14,10 @@ import { buscarPorId } from "../utilidades/conversas.js";
 import { formatarDia, formatarHoraMensagem } from "../utilidades/datas.js";
 import { PAPEIS } from "../utilidades/permissoes.js";
 import Avatar from "./Avatar.jsx";
+import { TURNOS } from "../configuracao.js";
 import Icone from "./Icone.jsx";
 
-const FILTROS_INICIAIS = { atendente: "", acao: "", periodo: "tudo", estacao: "", turno: "", busca: "" };
+const FILTROS_INICIAIS = { atendente: "", acao: "", periodo: "tudo", turno: "", busca: "" };
 
 /* Painel de supervisão: mensagens editadas e apagadas e conversas excluídas.
    Ocupa o lugar das conversas (quem decide é o App, pela estado.secao) */
@@ -94,11 +94,21 @@ export default function PainelSupervisao() {
       </div>
 
       <div className="supervisao__filtros">
-        <Filtro rotulo="Atendente" valor={filtros.atendente} aoMudar={(v) => mudarFiltro("atendente", v)}>
+        <Filtro rotulo="Quem fez" valor={filtros.atendente} aoMudar={(v) => mudarFiltro("atendente", v)}>
           <option value="">Todos</option>
           {estado.atendentes.map((a) => (
             <option key={a.id} value={a.id}>
               {a.nome}
+            </option>
+          ))}
+        </Filtro>
+
+        {/* O turno em que a estação estava (pelo horário do login) */}
+        <Filtro rotulo="Turno" valor={filtros.turno} aoMudar={(v) => mudarFiltro("turno", v)}>
+          <option value="">Todos</option>
+          {TURNOS.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.nome} ({t.inicio}h às {t.fim}h)
             </option>
           ))}
         </Filtro>
@@ -117,24 +127,6 @@ export default function PainelSupervisao() {
           <option value="hoje">Hoje</option>
           <option value="7">Últimos 7 dias</option>
           <option value="30">Últimos 30 dias</option>
-        </Filtro>
-
-        <Filtro rotulo="Estação" valor={filtros.estacao} aoMudar={(v) => mudarFiltro("estacao", v)}>
-          <option value="">Todas</option>
-          {estado.estacoes.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </Filtro>
-
-        <Filtro rotulo="Turno" valor={filtros.turno} aoMudar={(v) => mudarFiltro("turno", v)}>
-          <option value="">Todos</option>
-          {TURNOS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nome} ({t.inicio}h às {t.fim}h)
-            </option>
-          ))}
         </Filtro>
 
         <label className="campo-filtro campo-filtro--busca">

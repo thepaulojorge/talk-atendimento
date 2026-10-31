@@ -38,7 +38,12 @@ export function podeEncaminhar(msg) {
   return !msg.apagada && (msg.tipo === "texto" || ((msg.tipo === "audio" || msg.tipo === "arquivo") && Boolean(msg.arquivo)));
 }
 
-// Configurações (nome da empresa, escala de turnos): só a diretoria
+// Configurações (estações e números): supervisão e diretoria
 export function podeConfigurar(estado) {
+  return ["supervisor", "diretoria"].includes(papelDe(estado, estado.atendenteLogadoId));
+}
+
+// O nome da empresa e "Restaurar dados de exemplo": só a diretoria
+export function ehDiretoria(estado) {
   return papelDe(estado, estado.atendenteLogadoId) === "diretoria";
 }

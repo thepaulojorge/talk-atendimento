@@ -2606,8 +2606,7 @@ kbd {
   color: var(--texto-suave);
 }
 
-.config__campo input,
-.escala select {
+.config__campo input {
   height: 38px;
   padding: 0 10px;
   border: 1px solid var(--borda);
@@ -2618,8 +2617,7 @@ kbd {
   font-size: 14px;
 }
 
-.config__campo input:focus,
-.escala select:focus {
+.config__campo input:focus {
   outline: none;
   border-color: var(--destaque);
 }
@@ -2631,42 +2629,12 @@ kbd {
   color: var(--texto-suave);
 }
 
-/* A tabela rola de lado no celular, em vez de espremer as colunas */
-.escala {
-  overflow-x: auto;
-}
 
-.escala table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
 
-.escala th,
-.escala td {
-  padding: 6px;
-  text-align: left;
-}
 
-.escala thead th {
-  font-size: 13px;
-  color: var(--texto-suave);
-}
 
-.escala thead small {
-  display: block;
-  font-size: 11px;
-  font-weight: 400;
-}
 
-.escala tbody th {
-  white-space: nowrap;
-}
 
-.escala select {
-  width: 100%;
-  min-width: 110px;
-}
 
 /* =========================================================
    SUPERVISÃO: filtros de estação e turno
@@ -3332,4 +3300,217 @@ kbd {
 .mensagem:has(> .anexo-figurinha) {
   background: transparent;
   box-shadow: none;
+}
+
+/* =========================================================
+   CONFIGURAÇÕES: estações (dezenas!), números e empresa
+   ========================================================= */
+.configuracoes {
+  max-width: 640px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.config__topo,
+.config__secao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.config__secao-topo h3 {
+  margin-bottom: 0;
+}
+
+.config__fechar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--texto-suave);
+}
+
+.config__fechar:hover {
+  background: var(--fundo-hover);
+  color: var(--texto);
+}
+
+.config__botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.config__botao .icone {
+  width: 16px;
+  height: 16px;
+}
+
+.config__botao:disabled {
+  opacity: 0.6;
+}
+
+.config__busca {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo-hover);
+  color: var(--texto);
+  font: inherit;
+}
+
+/* A lista rola sozinha: 70 estações não empurram o resto da janela */
+.config__estacoes {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+}
+
+.config__estacoes li + li {
+  border-top: 1px solid var(--borda);
+}
+
+.config__estacoes button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  color: var(--texto);
+}
+
+.config__estacoes button:hover {
+  background: var(--fundo-hover);
+}
+
+.config__estacoes button > .icone {
+  width: 18px;
+  height: 18px;
+  color: var(--texto-suave);
+  flex-shrink: 0;
+}
+
+.config__estacao-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config__estacao-info strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.config__estacao-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.config__estacao-info .selo {
+  margin-left: 0;
+}
+
+.selo--desativada {
+  border-color: var(--alerta);
+  color: var(--alerta);
+}
+
+.config__formulario h3 {
+  margin: 10px 0 12px;
+  font-size: 16px;
+}
+
+.config__voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+
+.config__voltar .icone {
+  width: 16px;
+  height: 16px;
+}
+
+.config__grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.config__ativa {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.config__ativa input {
+  margin-top: 2px;
+  accent-color: var(--destaque);
+}
+
+.config__linha strong {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.config__linha .config__botao {
+  align-self: flex-start;
+}
+
+.config__empresa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.config__empresa .config__campo {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Transferir: a busca e a lista que rola */
+.transferir__busca {
+  width: 100%;
+  height: 38px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo-hover);
+  color: var(--texto);
+  font: inherit;
+}
+
+.transferir__lista {
+  max-height: 46dvh;
+  overflow-y: auto;
 }

@@ -2,7 +2,7 @@
 
 **Uma central de atendimento pelo WhatsApp para equipes que trabalham em estações e turnos.**
 
-Várias pessoas atendendo os clientes ao mesmo tempo, cada estação com o seu número de WhatsApp, supervisão acompanhando tudo, e cada mensagem registrada: quem enviou, de qual estação, em qual turno.
+Várias pessoas atendendo os clientes ao mesmo tempo, cada estação com o seu número de WhatsApp, supervisão acompanhando tudo, e cada mensagem registrada com a estação que enviou e em qual turno.
 
 🔗 **Ver funcionando:** https://thepaulojorge.github.io/talk-atendimento/
 (clique em **"Entrar na demonstração"**: as conversas são fictícias)
@@ -37,7 +37,7 @@ Numa central de atendimento por WhatsApp, o dia a dia costuma ser assim:
 | Cada estação tem um número de WhatsApp | Um celular (ou um WhatsApp Web) por estação | Todos os números numa tela só |
 | Colega sai para o intervalo ("rendição") | Logar no WhatsApp do outro, ou abrir mais uma janela | **Puxar a estação** do colega: as conversas dela entram na sua lista, com um selo (E02) |
 | Fim de semana: uma pessoa cobre 3 ou 4 estações | Várias janelas lado a lado | Puxa as 4 estações e atende tudo na mesma lista |
-| "Quem respondeu isso para o cliente?" | Ninguém sabe ao certo | Cada mensagem tem o nome de quem enviou, a estação e o turno |
+| "Quem respondeu isso para o cliente?" | Ninguém sabe ao certo | Cada mensagem tem a estação que enviou, e a auditoria mostra o turno |
 | Alguém apagou ou editou uma mensagem | O conteúdo se perde | A supervisão vê o original, na auditoria |
 | Combinar algo com a equipe sobre um cliente | Grupo paralelo, papel, memória | **Nota interna** amarela, dentro da própria conversa (o cliente não vê) |
 | Saber de quem é cada conversa | Confusão | Fila (ninguém atendendo), "Assumir", "Transferir", "Resolvida" |
@@ -48,7 +48,9 @@ Numa central de atendimento por WhatsApp, o dia a dia costuma ser assim:
 
 ### Login por estação
 
-A pessoa entra com o **e-mail da estação** (não o dela). O sistema olha a **escala de turnos** e descobre quem está trabalhando ali naquele horário:
+Cada estação tem o **seu e-mail de login** (criado pela empresa, ex.: `estacao01@suaempresa.com.br`) e o **seu número de WhatsApp**. Entrou com o e-mail, já está na estação, com o número dela: não importa quem está sentado ali.
+
+O horário do login fica registrado como o **turno** da estação, nos horários da empresa:
 
 | Turno | Horário |
 |---|---|
@@ -56,7 +58,9 @@ A pessoa entra com o **e-mail da estação** (não o dela). O sistema olha a **e
 | Tarde | 15h às 23h |
 | Noite | 23h às 7h |
 
-Assim, a mesma estação passa de pessoa para pessoa ao longo do dia, e cada mensagem continua com o nome certo.
+Atrasos não atrapalham: quem entra às 7h10 ou às 15h17 cai direto no turno certo, sem nenhuma pergunta. Na supervisão, cada registro mostra a estação **e o turno** (ex.: "Estação 01 · Tarde").
+
+O sistema foi pensado para **dezenas de estações** (testado com 70), com busca em todas as listas. A demonstração tem 10; o README da API explica como gerar 70.
 
 ### A lista de conversas
 
@@ -77,7 +81,7 @@ Assim, a mesma estação passa de pessoa para pessoa ao longo do dia, e cada men
 
 ### Estações (a "rendição")
 
-O ícone **Estações** mostra todas as estações, quem está escalado em cada uma agora e quem já puxou qual. Marcou a caixinha, as conversas daquela estação entram na sua lista. Sem cronômetro: fica com você até desmarcar ou sair do sistema.
+O ícone **Estações** mostra todas as estações (com busca), as que estão com você primeiro, e quem já puxou qual. Marcou a caixinha, as conversas daquela estação entram na sua lista. Sem cronômetro: fica com você até desmarcar ou sair do sistema.
 
 ### Supervisão
 
@@ -86,13 +90,13 @@ O painel de **Supervisão** mostra:
 - mensagens **apagadas** (com o conteúdo original)
 - conversas **excluídas** (com uma cópia de todas as mensagens)
 
-Cada registro diz quem fez, quando, de qual estação e em qual turno. Dá para filtrar e **exportar em CSV** (abre no Excel).
+Cada registro diz quem fez (a estação), em qual turno e quando. Dá para filtrar (por estação, turno, ação e período) e **exportar em CSV** (abre no Excel).
 
-### Configurações (diretoria)
+### Configurações (supervisão e diretoria)
 
-- **Nome da empresa** que aparece no sistema (*white-label*: o mesmo sistema serve para qualquer empresa)
-- **Escala de turnos** de cada estação
-- **Números de WhatsApp** de cada estação, da supervisão e da diretoria, e a ligação de cada um com a **Meta** (o WhatsApp oficial)
+- **Estações:** criar e editar cada uma (nome, sigla, e-mail e senha do login, número de WhatsApp e a ligação com a **Meta**, o WhatsApp oficial), bloquear o login sem apagar o histórico, com busca por nome, e-mail ou número
+- **Números exclusivos** da supervisão e da diretoria
+- **Nome da empresa** que aparece no sistema (*white-label*: o mesmo sistema serve para qualquer empresa). Só a diretoria muda
 
 ### Tudo ao vivo
 
@@ -113,7 +117,8 @@ A mesma tela se adapta: a barra de ícones vai para o rodapé, os menus sobem do
 | Número de WhatsApp exclusivo | — | ✅ | ✅ |
 | Ver o painel de Supervisão (auditoria) | — | ✅ | ✅ |
 | Ver o conteúdo de mensagens apagadas e editadas | — | ✅ | ✅ |
-| Configurações (escala, números, nome da empresa) | — | — | ✅ |
+| Cadastrar estações e números | — | ✅ | ✅ |
+| Mudar o nome da empresa | — | — | ✅ |
 
 ### Contas da demonstração
 
@@ -121,8 +126,7 @@ Todas com a senha `demo123`:
 
 | E-mail | Quem entra |
 |---|---|
-| `estacao01@talk.com` | Quem estiver na escala da Estação 01 no horário |
-| `estacao02@talk.com` | Quem estiver na escala da Estação 02 no horário |
+| `estacao01@talk.com` até `estacao10@talk.com` | A estação (as 3 primeiras têm conversas de exemplo) |
 | `supervisao@talk.com` | Beatriz (Supervisão) |
 | `diretoria@talk.com` | Helena (Diretoria) |
 
@@ -152,15 +156,15 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant P as Paulo (site)
+    participant P as Estação 01 (site)
     participant S as Servidor
     participant B as Banco
     participant W as WhatsApp (Meta)
-    participant C as Carla (site)
+    participant C as Estação 02 (site)
 
-    P->>P: a mensagem aparece NA HORA na tela dele
+    P->>P: a mensagem aparece NA HORA na tela
     P->>S: POST /api/conversas/c1/mensagens
-    S->>S: confere: o Paulo pode escrever nesta conversa?
+    S->>S: confere: a Estação 01 pode escrever nesta conversa?
     S->>W: envia pelo número da estação
     W-->>S: ok (id da mensagem no WhatsApp)
     S->>B: grava a mensagem

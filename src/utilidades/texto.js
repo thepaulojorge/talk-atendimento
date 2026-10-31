@@ -16,8 +16,10 @@ export function somenteDigitos(texto) {
   return (texto || "").replace(/\D/g, "");
 }
 
-// "Mariana Souza" -> "MS"
+// "Mariana Souza" -> "MS"; estações terminam em número: "Estação 07" -> "07", "Onixsat 12" -> "12"
 export function iniciais(nome) {
+  const numeroNoFim = nome.trim().match(/(\d{1,3})$/);
+  if (numeroNoFim) return numeroNoFim[1];
   return nome
     .split(" ")
     .filter(Boolean)

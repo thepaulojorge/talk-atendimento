@@ -1,7 +1,6 @@
 import { useEstado } from "../estado/useEstado.js";
 import { buscarPorId } from "../utilidades/conversas.js";
-import { PAPEIS, papelDe } from "../utilidades/permissoes.js";
-import { descreverSessao } from "../utilidades/turnos.js";
+import { descreverSessao } from "../utilidades/sessao.js";
 import Icone from "./Icone.jsx";
 
 /* A barra do topo: a marca (white-label) e quem está logado.
@@ -9,8 +8,8 @@ import Icone from "./Icone.jsx";
 export default function TopoApp() {
   const { estado } = useEstado();
   const atendente = buscarPorId(estado.atendentes, estado.atendenteLogadoId);
-  // De onde você entrou: "Estação 01 · Turno da manhã" (ou o papel, nas contas pessoais)
-  const onde = descreverSessao(estado.sessao, estado) || PAPEIS[papelDe(estado, estado.atendenteLogadoId)];
+  // "Estação 01 · +55 21 99000-0001" (ou "Beatriz · Supervisão", nas contas pessoais)
+  const onde = descreverSessao(estado);
 
   return (
     <header className="topo-app">

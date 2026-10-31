@@ -1,10 +1,12 @@
 /* Regras do painel de supervisão: filtrar, descrever e exportar os
    registros da auditoria. Funções puras, como as de filtros.js */
-import { TURNOS } from "../configuracao.js";
 import { buscarPorId } from "./conversas.js";
 import { diasAtras } from "./datas.js";
 import { PAPEIS } from "./permissoes.js";
 import { normalizar } from "./texto.js";
+import { TURNOS } from "../configuracao.js";
+
+const nomeDoTurno = (registro) => TURNOS.find((t) => t.id === registro.turnoId)?.nome;
 
 export const TIPOS_DE_ACAO = {
   edicao: "Edições",
@@ -20,12 +22,17 @@ export function descricaoDaAcao(registro) {
   return registro.tipo === "edicao" ? `editou ${oQue}` : `apagou ${oQue}`;
 }
 
-/* "Estação 01 · Manhã". Registros antigos (de antes do login por estação)
-   e os de contas pessoais (supervisão, diretoria) não têm estação: "" */
+/* De onde veio a ação: o TURNO ("Tarde") e, se for diferente do nome de
+   quem fez, a estação. Como o nome de quem fez já É o da estação
+   ("Estação 01 editou..."), ela só aparece quando mudou de nome depois.
+   Contas pessoais (supervisão, diretoria) não têm turno nem estação: "" */
 export function origemDoRegistro(registro, estado) {
   const estacao = buscarPorId(estado.estacoes, registro.estacaoId);
-  const turno = TURNOS.find((t) => t.id === registro.turnoId);
-  return [estacao?.nome, turno?.nome].filter(Boolean).join(" · ");
+  const autor = buscarPorId(estado.atendentes, registro.autorId);
+  const turno = nomeDoTurno(registro);
+  return [estacao && estacao.nome !== autor?.nome ? estacao.nome : "", turno && `Turno da ${turno.toLowerCase()}`]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function combinaComPeriodo(registro, periodo) {
@@ -50,13 +57,12 @@ function textoPesquisavel(registro, estado) {
 /* Os filtros, SEM o de ação. Separado de propósito: os cartões do resumo
    contam por ação usando esta lista. Se o filtro de ação entrasse aqui,
    ao escolher "Edições" os outros cartões mostrariam zero e perderiam a graça.
-   filtros = { atendente, acao, periodo, estacao, turno, busca } */
+   filtros = { atendente, acao, periodo, turno, busca } */
 export function filtrarSemAcao(estado, filtros) {
   const termo = normalizar(filtros.busca);
   return estado.auditoria.filter(
     (r) =>
       (!filtros.atendente || r.autorId === filtros.atendente) &&
-      (!filtros.estacao || r.estacaoId === filtros.estacao) &&
       (!filtros.turno || r.turnoId === filtros.turno) &&
       combinaComPeriodo(r, filtros.periodo) &&
       (!termo || textoPesquisavel(r, estado).includes(termo))
@@ -85,7 +91,7 @@ export function gerarCsv(registros, estado) {
       autor?.nome,
       PAPEIS[autor?.papel || "atendente"],
       buscarPorId(estado.estacoes, r.estacaoId)?.nome,
-      TURNOS.find((t) => t.id === r.turnoId)?.nome,
+      nomeDoTurno(r),
       descricaoDaAcao(r),
       r.conversaNome,
       conteudo,

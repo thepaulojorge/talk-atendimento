@@ -75,8 +75,7 @@ function registroDeAuditoria(estado, acao, conversa, msg, extra) {
   };
 }
 
-/* Estação e turno de quem fez a ação, para a auditoria.
-   Numa estação, o registro diz "Paulo, Estação 01, turno da manhã" */
+/* De qual estação e turno veio a ação, para a auditoria ("Estação 01 · Tarde") */
 function deOndeVeio(estado) {
   return { estacaoId: estado.sessao?.estacaoId || null, turnoId: estado.sessao?.turnoId || null };
 }

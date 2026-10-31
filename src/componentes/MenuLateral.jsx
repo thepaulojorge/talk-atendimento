@@ -4,8 +4,8 @@ import { avisar } from "../estado/avisos.js";
 import { useTema } from "../hooks/useTema.js";
 import { useTelaEstreita } from "../hooks/useTelaEstreita.js";
 import { buscarPorId, contarTotalNaoLidas } from "../utilidades/conversas.js";
-import { PAPEIS, papelDe, podeConfigurar, podeVerAuditoria } from "../utilidades/permissoes.js";
-import { descreverSessao } from "../utilidades/turnos.js";
+import { ehDiretoria, podeConfigurar, podeVerAuditoria } from "../utilidades/permissoes.js";
+import { descreverSessao } from "../utilidades/sessao.js";
 import { sairNoServidor } from "../api.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
@@ -51,10 +51,10 @@ export default function MenuLateral() {
   }
 
   const irPara = (secao) => despachar({ tipo: "irPara", secao });
-  const podeRestaurar = estado.modoDemonstracao && podeConfigurar(estado);
+  const podeRestaurar = estado.modoDemonstracao && ehDiretoria(estado);
 
-  // De onde você entrou: "Estação 01 · Turno da manhã" (ou o papel, nas contas pessoais)
-  const onde = descreverSessao(estado.sessao, estado) || PAPEIS[papelDe(estado, estado.atendenteLogadoId)];
+  // "Estação 01 · +55 21 99000-0001" (ou o papel, nas contas pessoais)
+  const onde = descreverSessao(estado);
   const rotuloTema = tema === "claro" ? "Ativar tema escuro" : "Ativar tema claro";
 
   return (

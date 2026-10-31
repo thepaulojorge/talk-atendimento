@@ -70,9 +70,17 @@ export const soltarEstacao = (token, estacaoId) => pedir(`/estacoes/${estacaoId}
 export const sairNoServidor = (token) => pedir("/auth/sair", { metodo: "POST", token });
 
 // Configurações da empresa (diretoria)
-export const buscarConfiguracoes = (token) => pedir("/configuracoes", { token });
-export const salvarConfiguracoes = (token, configuracoes) =>
-  pedir("/configuracoes", { metodo: "PUT", corpo: configuracoes, token });
+export const buscarConfiguracoes = (token) => pedir("/admin", { token });
+// Estação nova: { nome, sigla, email, senha, numero, whatsappId }
+export const criarEstacao = (token, estacao) => pedir("/admin/estacoes", { metodo: "POST", corpo: estacao, token });
+// Editar: os mesmos campos + ativa; senha vazia = não muda
+export const salvarEstacao = (token, id, estacao) =>
+  pedir(`/admin/estacoes/${encodeURIComponent(id)}`, { metodo: "PUT", corpo: estacao, token });
+// Número da supervisão ou da diretoria: { numero, whatsappId }
+export const salvarLinha = (token, id, linha) =>
+  pedir(`/admin/linhas/${encodeURIComponent(id)}`, { metodo: "PUT", corpo: linha, token });
+// Nome da empresa (só a diretoria)
+export const salvarMarca = (token, nome) => pedir("/admin/marca", { metodo: "PUT", corpo: { nome }, token });
 
 /* B5: GRAVAR uma ação no banco. Quem monta o pedido (método, endereço e
    corpo) é o estado/sincronizar.js; aqui só enviamos */
