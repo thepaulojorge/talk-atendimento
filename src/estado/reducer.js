@@ -345,7 +345,10 @@ export function reducer(estado, acao) {
               ...acao.conteudo,
               horario: acao.agora,
               direcao: "enviada",
-              lida: false, // ✓✓ cinza: o cliente ainda não leu
+              lida: false, // o cliente ainda não leu
+              /* Pelo WhatsApp de verdade: ✓ até a Meta avisar que chegou.
+                 Linha de exemplo: já nasce entregue (✓✓ cinza). A mesma regra do servidor */
+              entregue: !buscarPorId(estado.linhas, conversa.linhaId)?.whatsapp,
               autor: estado.atendenteLogadoId,
               respostaA: acao.respostaA || null,
             };
@@ -628,7 +631,7 @@ export function reducer(estado, acao) {
     case "mensagemLida":
       return {
         ...estado,
-        conversas: mudarMensagem(estado.conversas, acao.conversaId, acao.mensagemId, (msg) => ({ ...msg, lida: true })),
+        conversas: mudarMensagem(estado.conversas, acao.conversaId, acao.mensagemId, (msg) => ({ ...msg, lida: true, entregue: true })),
       };
 
     case "mostrarAviso":

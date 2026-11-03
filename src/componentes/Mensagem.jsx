@@ -6,6 +6,7 @@ import { podeVerAuditoria } from "../utilidades/permissoes.js";
 import Icone from "./Icone.jsx";
 import BalaoAudio from "./BalaoAudio.jsx";
 import BalaoArquivo from "./BalaoArquivo.jsx";
+import StatusEntrega from "./StatusEntrega.jsx";
 
 /* Um balão de mensagem: texto, áudio, arquivo, nota interna ou apagada.
    Props:
@@ -134,14 +135,8 @@ function Rodape({ msg, supervisao = false }) {
         </span>
       )}
       <span className="mensagem__hora">{formatarHoraMensagem(msg.horario)}</span>
-      {msg.direcao === "enviada" && !msg.apagada && !msg.erroEnvio && (
-        <span
-          className={`mensagem__status${msg.lida ? " mensagem__status--lida" : ""}`}
-          aria-label={msg.lida ? "Lida" : "Entregue"}
-        >
-          ✓✓
-        </span>
-      )}
+      {/* ✓, ✓✓ cinza ou ✓✓ azul (ver StatusEntrega.jsx) */}
+      <StatusEntrega msg={msg} />
     </div>
   );
 }

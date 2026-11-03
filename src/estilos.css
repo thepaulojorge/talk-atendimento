@@ -961,14 +961,28 @@ kbd {
 }
 
 /* Tracinhos ✓✓: cinza = entregue, azul = lida pelo cliente */
-.mensagem__status {
+/* Os risquinhos ✓ / ✓✓ (ver StatusEntrega.jsx): no balão e na lista */
+.status-entrega {
   font-size: 12px;
   letter-spacing: -3px; /* aproxima os dois ✓ */
   color: var(--texto-suave);
 }
 
-.mensagem__status--lida {
+.status-entrega--lida {
   color: var(--azul-lido);
+}
+
+/* Na lista: antes do texto da prévia, com um respiro (o letter-spacing
+   negativo "come" o espaço do lado direito) */
+.status-entrega--lista {
+  margin-right: 6px;
+  font-size: 13px;
+}
+
+.status-entrega--falhou {
+  color: var(--alerta);
+  letter-spacing: 0;
+  margin-right: 4px;
 }
 
 /* ----- Botão ↩ "Responder" de cada balão ----- */

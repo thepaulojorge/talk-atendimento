@@ -13,6 +13,7 @@ import { previaParaLista } from "../utilidades/filtros.js";
 import { formatarHoraLista } from "../utilidades/datas.js";
 import Avatar from "./Avatar.jsx";
 import Icone from "./Icone.jsx";
+import StatusEntrega from "./StatusEntrega.jsx";
 
 /* Uma conversa na lista. Compare com a antiga criarItemConversa():
    a lógica é a mesma, mas o HTML aparece escrito do jeito que vai ficar */
@@ -28,6 +29,11 @@ export default function ItemConversa({ conversa, termoBusca = "", agora, selecio
   const nome = nomeDaConversa(conversa, estado.contatos);
   const naoLidas = contarNaoLidas(conversa);
   const msg = ultimaMensagem(conversa);
+  const previa = previaParaLista(conversa, estado, termoBusca);
+  /* Os risquinhos (✓ / ✓✓) da ÚLTIMA mensagem, se ela for nossa.
+     Quando a prévia é um resultado da busca ("🔍 ..."), ela pode ser outra
+     mensagem: aí os risquinhos não aparecem, para não confundir */
+  const mostrarStatus = msg && !previa.startsWith("🔍");
   const resolvida = estaResolvida(conversa);
 
   /* ALERTA DE ESPERA: há quantos minutos a mensagem não lida mais antiga
@@ -88,7 +94,10 @@ export default function ItemConversa({ conversa, termoBusca = "", agora, selecio
         <div className="conversa__nome">{nome}</div>
         {/* {} no JSX = "aqui entra um valor do JavaScript". O texto é
             colocado como TEXTO, nunca como HTML: o React já protege contra XSS */}
-        <div className="conversa__previa">{previaParaLista(conversa, estado, termoBusca)}</div>
+        <div className="conversa__previa">
+          {mostrarStatus && <StatusEntrega msg={msg} naLista />}
+          {previa}
+        </div>
 
         {(linha || temStatus || etiquetas.length > 0) && (
           <div className="conversa__etiquetas">

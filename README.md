@@ -78,7 +78,7 @@ O sistema foi pensado para **dezenas de estações** (testado com 70), com busca
 - **Nota interna:** só a equipe vê
 - **Assumir**, **transferir** para um colega (ou devolver para a fila), **marcar como resolvida**
 - **Etiquetas** coloridas (algumas com nome personalizável)
-- ✓✓ ficam azuis quando o cliente lê
+- **Risquinhos**, no balão e na lista de conversas, como no WhatsApp: ✓ enviada, ✓✓ cinza entregue (ainda não lida), ✓✓ azul lida, e ⚠ quando o WhatsApp não entregou
 - **Editar contato:** no "Dados do contato", o ✏️ muda o **nome** e o **número** (aceita qualquer formato: `(21) 98811-0001`, `21988110001`…)
 
 ### Estações (a "rendição")
