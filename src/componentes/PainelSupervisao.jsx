@@ -155,8 +155,7 @@ export default function PainelSupervisao() {
       </ol>
 
       <p className="supervisao__nota">
-        Protótipo: os registros ficam salvos só neste navegador. Na versão com servidor, eles serão gravados num banco de
-        dados onde ninguém consegue alterar ou apagar.
+        Os registros ficam guardados no servidor: nenhuma estação consegue alterar ou apagar o que aparece aqui.
       </p>
     </section>
   );
